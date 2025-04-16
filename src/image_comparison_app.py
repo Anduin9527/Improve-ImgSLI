@@ -13,6 +13,14 @@ from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QVBoxLay
 from PyQt6.QtGui import QPixmap, QColor, QImage, QDragEnterEvent, QDropEvent, QAction, QIcon, QShortcut, QKeySequence, QCursor, QFont, QFontDatabase, QFontMetrics, QDrag, QPainter, QBrush, QPen
 from PyQt6.QtCore import Qt, QTimer, QEvent, QElapsedTimer, QPoint, QPointF, QMimeData, QSize, QByteArray, QSettings, QT_VERSION_STR, QLocale, QFile, QIODevice, QTextStream, QCoreApplication, QRectF
 
+# 导入PyQt6-Fluent-Widgets相关模块
+from qfluentwidgets import (FluentIcon, Theme, setTheme, InfoBar, StateToolTip, 
+                           PushButton, ComboBox, CheckBox, Slider, LineEdit, 
+                           ToolTipFilter, TitleLabel, BodyLabel, CaptionLabel, 
+                           ColorDialog, MessageBox, setFont, FluentStyleSheet, 
+                           FluentWindow, SplitFluentWindow, ScrollArea, TransparentPushButton)
+from qfluentwidgets import FluentTranslator
+
 try:
     import settings_dialog
     from settings_dialog import SettingsDialog
@@ -81,6 +89,15 @@ class ImageComparisonApp(QWidget):
 
     def __init__(self):
         super().__init__()
+        
+        # 设置 Fluent 风格和主题
+        setTheme(Theme.AUTO)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
+        
+        # 添加 Fluent 翻译器
+        self.fluent_translator = FluentTranslator()
+        QApplication.instance().installTranslator(self.fluent_translator)
+        
         self._determine_font_path()
         self.settings = QSettings('MyCompany', 'ImageComparisonApp')
         self._load_settings()
@@ -365,11 +382,11 @@ class ImageComparisonApp(QWidget):
 
     def _create_button_layout(self):
         layout = QHBoxLayout()
-        self.btn_image1 = QPushButton()
-        self.btn_image2 = QPushButton()
-        self.btn_swap = QPushButton()
-        self.btn_clear_list1 = QPushButton()
-        self.btn_clear_list2 = QPushButton()
+        self.btn_image1 = PushButton()
+        self.btn_image2 = PushButton()
+        self.btn_swap = TransparentPushButton()
+        self.btn_clear_list1 = TransparentPushButton()
+        self.btn_clear_list2 = TransparentPushButton()
         swap_icon = self._get_icon('swap', fallback_text='⇄')
         self.btn_swap.setIcon(swap_icon)
         self.btn_swap.setIconSize(QSize(20, 20))
@@ -392,35 +409,64 @@ class ImageComparisonApp(QWidget):
 
     def _create_combobox_layout(self):
         layout = QHBoxLayout()
-        self.combo_image1 = QComboBox()
-        self.combo_image2 = QComboBox()
+        self.combo_image1 = ComboBox()
+        self.combo_image2 = ComboBox()
         layout.addWidget(self.combo_image1)
         layout.addWidget(self.combo_image2)
         return layout
 
     def _create_checkbox_layout(self):
         layout = QHBoxLayout()
-        self.checkbox_horizontal = QCheckBox()
-        self.checkbox_magnifier = QCheckBox()
-        self.freeze_button = QCheckBox()
-        self.checkbox_file_names = QCheckBox()
-        self.help_button = QPushButton()
+        layout.setSpacing(10)  # 设置控件之间的间距
+        
+        # 创建一个水平布局，专门用于复选框
+        checkbox_layout = QHBoxLayout()
+        checkbox_layout.setSpacing(15)  # 设置复选框之间的间距
+        
+        self.checkbox_horizontal = CheckBox()
+        self.checkbox_magnifier = CheckBox()
+        self.freeze_button = CheckBox()
+        self.checkbox_file_names = CheckBox()
+        
+        # 设置复选框的最小宽度，确保文本显示完整
+        self.checkbox_horizontal.setMinimumWidth(120)
+        self.checkbox_magnifier.setMinimumWidth(120)
+        self.freeze_button.setMinimumWidth(120)
+        self.checkbox_file_names.setMinimumWidth(140)
+        
+        # 添加复选框到复选框布局
+        checkbox_layout.addWidget(self.checkbox_horizontal)
+        checkbox_layout.addWidget(self.checkbox_magnifier)
+        checkbox_layout.addWidget(self.freeze_button)
+        checkbox_layout.addWidget(self.checkbox_file_names)
+        checkbox_layout.addStretch(1)  # 添加弹性空间
+        
+        # 将复选框布局添加到主布局
+        layout.addLayout(checkbox_layout, 1)  # 给复选框布局分配更多空间
+        
+        # 创建一个水平布局用于按钮
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(5)
+        
+        self.help_button = TransparentPushButton()
         help_icon = self._get_icon('help', fallback_text='?')
         self.help_button.setIcon(help_icon)
         self.help_button.setIconSize(QSize(20, 20))
         self.help_button.setFixedSize(24, 24)
-        self.btn_settings = QPushButton()
+        
+        self.btn_settings = TransparentPushButton()
         settings_icon = self._get_icon('settings', fallback_text='...')
         self.btn_settings.setIcon(settings_icon)
         self.btn_settings.setIconSize(QSize(20, 20))
         self.btn_settings.setFixedSize(24, 24)
-        layout.addWidget(self.checkbox_horizontal)
-        layout.addWidget(self.checkbox_magnifier)
-        layout.addWidget(self.freeze_button)
-        layout.addWidget(self.checkbox_file_names)
-        layout.addStretch()
-        layout.addWidget(self.btn_settings)
-        layout.addWidget(self.help_button)
+        
+        # 添加按钮到按钮布局
+        button_layout.addWidget(self.btn_settings)
+        button_layout.addWidget(self.help_button)
+        
+        # 将按钮布局添加到主布局
+        layout.addLayout(button_layout)
+        
         return layout
 
     def _get_icon(self, icon_key, fallback_text='', use_standard_fallback=None):
@@ -453,12 +499,15 @@ class ImageComparisonApp(QWidget):
 
     def _create_slider_layout(self):
         layout = QHBoxLayout()
-        self.label_magnifier_size = QLabel()
-        self.slider_size = QSlider(Qt.Orientation.Horizontal, minimum=5, maximum=100)
-        self.label_capture_size = QLabel()
-        self.slider_capture = QSlider(Qt.Orientation.Horizontal, minimum=1, maximum=50)
-        self.label_movement_speed = QLabel()
-        self.slider_speed = QSlider(Qt.Orientation.Horizontal, minimum=1, maximum=50)
+        self.label_magnifier_size = BodyLabel()
+        self.slider_size = Slider(Qt.Orientation.Horizontal)
+        self.slider_size.setRange(5, 100)
+        self.label_capture_size = BodyLabel()
+        self.slider_capture = Slider(Qt.Orientation.Horizontal)
+        self.slider_capture.setRange(1, 50)
+        self.label_movement_speed = BodyLabel()
+        self.slider_speed = Slider(Qt.Orientation.Horizontal)
+        self.slider_speed.setRange(1, 50)
         layout.addWidget(self.label_magnifier_size)
         layout.addWidget(self.slider_size)
         layout.addWidget(self.label_capture_size)
@@ -477,8 +526,8 @@ class ImageComparisonApp(QWidget):
 
     def _create_file_names_layout(self):
         layout = QHBoxLayout()
-        self.file_name_label1 = QLabel('--')
-        self.file_name_label2 = QLabel('--')
+        self.file_name_label1 = CaptionLabel('--')
+        self.file_name_label2 = CaptionLabel('--')
         self.file_name_label1.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.file_name_label2.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         layout.addWidget(self.file_name_label1, alignment=Qt.AlignmentFlag.AlignLeft)
@@ -489,18 +538,19 @@ class ImageComparisonApp(QWidget):
 
     def _create_edit_layout(self):
         self.edit_layout = QHBoxLayout()
-        self.label_edit_name1 = QLabel()
-        self.edit_name1 = QLineEdit()
-        self.label_edit_name2 = QLabel()
-        self.edit_name2 = QLineEdit()
-        self.label_edit_font_size = QLabel()
-        self.font_size_slider = QSlider(Qt.Orientation.Horizontal, minimum=10, maximum=1000, value=200)
-        self.btn_color_picker = QPushButton()
+        self.label_edit_name1 = BodyLabel()
+        self.edit_name1 = LineEdit()
+        self.label_edit_name2 = BodyLabel()
+        self.edit_name2 = LineEdit()
+        self.label_edit_font_size = BodyLabel()
+        self.font_size_slider = Slider(Qt.Orientation.Horizontal)
+        self.font_size_slider.setRange(10, 1000)
+        self.font_size_slider.setValue(200)
+        self.btn_color_picker = PushButton()
         icon_size = QSize(20, 20)
         self.btn_color_picker.setIcon(self._create_color_wheel_icon(icon_size))
         self.btn_color_picker.setIconSize(icon_size)
         self.btn_color_picker.setFixedSize(26, 26)
-        self.btn_color_picker.setStyleSheet('QPushButton { border: 1px solid grey; border-radius: 13px; }')
         self.edit_layout.addWidget(self.label_edit_name1)
         self.edit_layout.addWidget(self.edit_name1)
         self.edit_layout.addWidget(self.label_edit_name2)
@@ -533,11 +583,11 @@ class ImageComparisonApp(QWidget):
         save_layout = QHBoxLayout()
         save_layout.setSpacing(5)
         
-        self.btn_save = QPushButton()
+        self.btn_save = PushButton()
         save_layout.addWidget(self.btn_save)
         
         # Add animation export button
-        self.btn_save_animation = QPushButton()
+        self.btn_save_animation = PushButton()
         save_layout.addWidget(self.btn_save_animation)
         
         # Create a widget to hold the layout
@@ -684,19 +734,19 @@ class ImageComparisonApp(QWidget):
 
     def _init_drag_overlays(self):
         style = '\n            background-color: rgba(0, 100, 200, 0.6);\n            color: white;\n            font-size: 20px;\n            border-radius: 10px;\n            padding: 15px;\n            border: 1px solid rgba(255, 255, 255, 0.7);\n        '
-        self.drag_overlay1 = QLabel(self.image_label)
+        self.drag_overlay1 = BodyLabel(self.image_label)
         self.drag_overlay1.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.drag_overlay1.setStyleSheet(style)
         self.drag_overlay1.setWordWrap(True)
         self.drag_overlay1.hide()
-        self.drag_overlay2 = QLabel(self.image_label)
+        self.drag_overlay2 = BodyLabel(self.image_label)
         self.drag_overlay2.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.drag_overlay2.setStyleSheet(style)
         self.drag_overlay2.setWordWrap(True)
         self.drag_overlay2.hide()
 
     def _init_warning_label(self):
-        self.length_warning_label = QLabel(self)
+        self.length_warning_label = BodyLabel(self)
         self.length_warning_label.setStyleSheet('color: #FF4500; font-weight: bold;')
         self.length_warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.length_warning_label.setVisible(False)
@@ -860,12 +910,22 @@ class ImageComparisonApp(QWidget):
             if errors:
                 reason_list.append(tr('Errors:', self.current_language) + f' {len(errors)}')
             reason_str = '\n - '.join(reason_list) if reason_list else tr('No supported local image files detected in drop.', self.current_language)
-            QMessageBox.information(self, tr('Information', self.current_language), tr('No supported local image files could be processed from the dropped items.', self.current_language) + (f"\n\n{tr('Details:', self.current_language)}\n - {reason_str}" if reason_list else ''))
+            MessageBox(
+                tr('Information', self.current_language),
+                tr('No supported local image files could be processed from the dropped items.', self.current_language) + 
+                (f"\n\n{tr('Details:', self.current_language)}\n - {reason_str}" if reason_list else ''),
+                self
+            ).exec()
             return
         QTimer.singleShot(0, lambda: self._load_images_from_paths(local_file_paths, target_image_num))
         if errors:
             error_details = '\n - '.join(errors)
-            QMessageBox.warning(self, tr('Warning', self.current_language), tr('Some errors occurred while processing dropped files:', self.current_language) + f"\n\n{tr('Details:', self.current_language)}\n - {error_details}")
+            MessageBox(
+                tr('Warning', self.current_language),
+                tr('Some errors occurred while processing dropped files:', self.current_language) + 
+                f"\n\n{tr('Details:', self.current_language)}\n - {error_details}",
+                self
+            ).exec()
 
     def changeEvent(self, event):
         event_type = event.type()
@@ -1070,226 +1130,184 @@ class ImageComparisonApp(QWidget):
             QTimer.singleShot(0, lambda: self._load_images_from_paths(file_names, image_number))
 
     def _load_images_from_paths(self, file_paths: list[str], image_number: int):
-        target_list = self.image_list1 if image_number == 1 else self.image_list2
-        combobox = self.combo_image1 if image_number == 1 else self.combo_image2
-        loaded_count = 0
-        newly_added_indices = []
-        paths_actually_added = []
-        load_errors = []
-        current_paths_in_list = {entry[1] for entry in target_list if len(entry) > 1 and entry[1]}
-        target_selection_index = -1
-        current_selected_index_before_load = self.current_index1 if image_number == 1 else self.current_index2
-        if 0 <= current_selected_index_before_load < len(target_list):
-            target_selection_index = current_selected_index_before_load
-        for file_path in file_paths:
-            if not isinstance(file_path, str) or not file_path:
-                load_errors.append(f"{str(file_path)}: {tr('Invalid item type or empty path', self.current_language)}")
-                continue
+        if not file_paths:
+            print(f'Warning: No file paths given to _load_images_from_paths for image {image_number}')
+            return
+            
+        print(f'Loading {len(file_paths)} image paths into slot {image_number}')
+        
+        # 确定存储图像的列表
+        img_list = self.image_list1 if image_number == 1 else self.image_list2
+        
+        # 添加新图像路径
+        for path in file_paths:
             try:
-                normalized_path = os.path.normpath(file_path)
-                original_path_for_display = os.path.basename(normalized_path) or tr('Unnamed File', self.current_language)
-            except Exception as e_norm:
-                load_errors.append(f'{file_path}: Error normalizing path - {e_norm}')
-                continue
-            if normalized_path in current_paths_in_list:
-                print(f'Path {original_path_for_display} already exists. Finding and selecting it.')
-                found_index = -1
-                try:
-                    for idx, item_data in enumerate(target_list):
-                        if isinstance(item_data, tuple) and len(item_data) > 1 and (item_data[1] == normalized_path):
-                            found_index = idx
-                            break
-                    if found_index != -1:
-                        target_selection_index = found_index
-                        print(f'Found at index {found_index}. Will select after processing all files.')
+                if path and os.path.isfile(path):
+                    # 检查是否已经存在于列表中
+                    if path not in img_list:
+                        img_list.append(path)
                     else:
-                        print(f'Warning: Path {normalized_path} was in set but not found in list {image_number}.')
-                        load_errors.append(f"{original_path_for_display}: {tr('Internal state inconsistency (path in set, not list)', self.current_language)}")
-                except Exception as e_find:
-                    print(f'Error finding existing index for {normalized_path}: {e_find}')
-                    load_errors.append(f"{original_path_for_display}: {tr('Error finding existing item', self.current_language)} - {e_find}")
-                continue
-            try:
-                if not os.path.isfile(normalized_path):
-                    raise FileNotFoundError(f'File not found at path: {normalized_path}')
-                with Image.open(normalized_path) as img:
-                    if not hasattr(img, 'copy') or not hasattr(img, 'mode') or (not hasattr(img, 'size')):
-                        raise TypeError(f'Image.open returned unexpected type: {type(img)}')
-                    temp_image = img.copy()
-                    temp_image.load()
-                    if temp_image.mode != 'RGBA':
-                        temp_image = temp_image.convert('RGBA')
-                display_name = original_path_for_display
-                target_list.append((temp_image, normalized_path, display_name))
-                current_paths_in_list.add(normalized_path)
-                newly_added_index = len(target_list) - 1
-                newly_added_indices.append(newly_added_index)
-                paths_actually_added.append(normalized_path)
-                loaded_count += 1
-                target_selection_index = newly_added_index
-            except FileNotFoundError:
-                error_detail = tr('File not found or inaccessible.', self.current_language)
-                load_errors.append(f'{original_path_for_display}: {error_detail}')
-            except UnidentifiedImageError:
-                error_detail = tr('Cannot identify image file (unsupported format?).', self.current_language)
-                load_errors.append(f'{original_path_for_display}: {error_detail}')
-            except (OSError, IOError, MemoryError, TypeError, ValueError) as e:
-                print(f"Error loading image '{original_path_for_display}': {e}")
-                traceback.print_exc()
-                error_detail = f'{type(e).__name__}: {str(e)[:100]}'
-                load_errors.append(f'{original_path_for_display}: {error_detail}')
+                        print(f'Path already exists in list {image_number}: {path}')
+                else:
+                    print(f'Path does not exist: {path}')
             except Exception as e:
-                print(f"Unexpected error loading image '{original_path_for_display}': {e}")
-                traceback.print_exc()
-                error_detail = f'Unexpected {type(e).__name__}: {str(e)[:100]}'
-                load_errors.append(f'{original_path_for_display}: {error_detail}')
-        if loaded_count > 0 or target_selection_index != (self.current_index1 if image_number == 1 else self.current_index2):
-            final_index_to_set = -1
-            if 0 <= target_selection_index < len(target_list):
-                final_index_to_set = target_selection_index
-            elif len(target_list) > 0:
-                if newly_added_indices:
-                    final_index_to_set = newly_added_indices[-1]
-                    print(f'Warning: Target index {target_selection_index} invalid, falling back to last added: {final_index_to_set}')
-                else:
-                    final_index_to_set = 0
-                    print(f'Warning: Target index {target_selection_index} invalid and no new items, falling back to index 0.')
-            if final_index_to_set != -1:
-                if image_number == 1:
-                    self.current_index1 = final_index_to_set
-                else:
-                    self.current_index2 = final_index_to_set
-            else:
-                print(f'No valid index to select for slot {image_number} after processing. Setting index to -1.')
-                if image_number == 1:
-                    self.current_index1 = -1
-                else:
-                    self.current_index2 = -1
-            self._update_combobox(image_number)
-            self._set_current_image(image_number, trigger_update=True)
-        if load_errors:
-            QMessageBox.warning(self, tr('Error Loading Images', self.current_language), tr('Some images could not be loaded:', self.current_language) + '\n\n - ' + '\n - '.join(load_errors))
+                print(f'Error adding path to image list {image_number}: {e}')
+        
+        # 更新当前索引，如果之前没有设置或者无效
+        if image_number == 1:
+            if self.current_index1 < 0 or self.current_index1 >= len(self.image_list1):
+                self.current_index1 = 0 if self.image_list1 else -1
+        else:
+            if self.current_index2 < 0 or self.current_index2 >= len(self.image_list2):
+                self.current_index2 = 0 if self.image_list2 else -1
+        
+        # 更新ComboBox
+        self._update_combobox(image_number)
+        
+        # 设置当前图像
+        self._set_current_image(image_number)
+        
+        # 更新文件名
+        self.update_file_names()
 
     def _set_current_image(self, image_number, trigger_update=True):
-        target_list = self.image_list1 if image_number == 1 else self.image_list2
+        img_list = self.image_list1 if image_number == 1 else self.image_list2
         current_index = self.current_index1 if image_number == 1 else self.current_index2
-        edit_name_widget = self.edit_name1 if image_number == 1 else self.edit_name2
-        old_orig1_size = self.original_image1.size if self.original_image1 and hasattr(self.original_image1, 'size') else None
-        old_orig2_size = self.original_image2.size if self.original_image2 and hasattr(self.original_image2, 'size') else None
-        reset_image = True
-        new_pil_img = None
-        new_path = None
-        new_display_name = None
-        if 0 <= current_index < len(target_list):
-            try:
-                img_data = target_list[current_index]
-                if isinstance(img_data, tuple) and len(img_data) >= 3:
-                    if isinstance(img_data[0], Image.Image) and hasattr(img_data[0], 'size'):
-                        new_pil_img, new_path, new_display_name = img_data[:3]
-                        reset_image = False
-                    else:
-                        print(f'Warning: Invalid image object in list {image_number} at index {current_index}.')
-                else:
-                    print(f'Warning: Invalid data format in list {image_number} at index {current_index}. Expected tuple(Image, path, name).')
-            except Exception as e:
-                print(f'Error accessing image data for slot {image_number} at index {current_index}: {e}')
-                traceback.print_exc()
-        if reset_image:
+        
+        if not img_list or current_index < 0 or current_index >= len(img_list):
             if image_number == 1:
                 self.original_image1 = None
                 self.image1_path = None
-                self.image1 = None
             else:
                 self.original_image2 = None
                 self.image2_path = None
-                self.image2 = None
-            if edit_name_widget:
-                edit_name_widget.blockSignals(True)
-                edit_name_widget.clear()
-                edit_name_widget.blockSignals(False)
-        else:
-            if image_number == 1:
-                self.original_image1 = new_pil_img
-                self.image1_path = new_path
-                self.image1 = None
+            self.update_file_names()
+            if trigger_update:
+                try:
+                    self.update_comparison_if_needed()
+                except Exception as e:
+                    print(f'Error in update_comparison_if_needed from _set_current_image: {e}')
+                    traceback.print_exc()
+            return
+            
+        try:
+            path = img_list[current_index]
+            
+            # 加载图像并设置相关属性
+            if path and os.path.isfile(path):
+                try:
+                    # 使用PIL打开图像文件
+                    loaded_image = Image.open(path)
+                    
+                    # 设置图像和路径属性
+                    if image_number == 1:
+                        self.original_image1 = loaded_image
+                        self.image1_path = path
+                    else:
+                        self.original_image2 = loaded_image
+                        self.image2_path = path
+                        
+                    print(f'Set image {image_number} to file: {path}')
+                    
+                    # 调整图像大小（如果两张图像都已加载）
+                    if self.original_image1 and self.original_image2:
+                        resize_images_processor(self)
+                        
+                    # 更新界面和显示
+                    self.update_file_names()
+                    self._update_resolution_labels()
+                    
+                    if trigger_update:
+                        self.update_comparison_if_needed()
+                        
+                except (IOError, UnidentifiedImageError) as e:
+                    print(f"Error opening image file '{path}': {e}")
+                    MessageBox(
+                        tr('Error', self.current_language),
+                        tr('Could not open image file:', self.current_language) + f"\n{path}\n\n{str(e)}",
+                        self
+                    ).exec()
+                except Exception as e:
+                    print(f"Unexpected error opening image '{path}': {e}")
+                    traceback.print_exc()
+                    MessageBox(
+                        tr('Error', self.current_language),
+                        tr('Unexpected error opening image:', self.current_language) + f"\n{path}\n\n{str(e)}",
+                        self
+                    ).exec()
             else:
-                self.original_image2 = new_pil_img
-                self.image2_path = new_path
-                self.image2 = None
-            if edit_name_widget:
-                edit_name_widget.blockSignals(True)
-                edit_name_widget.setText(new_display_name or '')
-                edit_name_widget.blockSignals(False)
-        new_orig1_size = self.original_image1.size if self.original_image1 and hasattr(self.original_image1, 'size') else None
-        new_orig2_size = self.original_image2.size if self.original_image2 and hasattr(self.original_image2, 'size') else None
-        max_dims_changed = False
-        old_max_w = max(old_orig1_size[0] if old_orig1_size else 0, old_orig2_size[0] if old_orig2_size else 0)
-        old_max_h = max(old_orig1_size[1] if old_orig1_size else 0, old_orig2_size[1] if old_orig2_size else 0)
-        new_max_w = max(new_orig1_size[0] if new_orig1_size else 0, new_orig2_size[0] if new_orig2_size else 0)
-        new_max_h = max(new_orig1_size[1] if new_orig1_size else 0, new_orig2_size[1] if new_orig2_size else 0)
-        if old_max_w != new_max_w or old_max_h != new_max_h:
-            max_dims_changed = True
-            self.image1 = None
-            self.image2 = None
-        self.update_file_names()
-        self._update_resolution_labels()
-        if trigger_update:
-            self.update_comparison_if_needed()
+                print(f"Warning: Path '{path}' is not a valid file.")
+                
+        except Exception as e:
+            print(f"Error in _set_current_image({image_number}): {e}")
+            traceback.print_exc()
 
     def _update_combobox(self, image_number):
         combobox = self.combo_image1 if image_number == 1 else self.combo_image2
-        target_list = self.image_list1 if image_number == 1 else self.image_list2
-        current_internal_index = self.current_index1 if image_number == 1 else self.current_index2
-        combobox.blockSignals(True)
-        combobox.clear()
-        for i, item_data in enumerate(target_list):
-            display_name = tr('Invalid Data', self.current_language)
-            if isinstance(item_data, tuple) and len(item_data) >= 3:
-                display_name = item_data[2] or tr('Unnamed', self.current_language)
-            elif isinstance(item_data, tuple) and len(item_data) >= 2 and item_data[1]:
-                display_name = os.path.basename(item_data[1])
-            else:
-                print(f'Warning: Unexpected item format in list {image_number} at index {i}')
-                pass
-            max_cb_len = 60
-            cb_name = display_name[:max_cb_len - 3] + '...' if len(display_name) > max_cb_len else display_name
-            combobox.addItem(cb_name)
-            combobox.setItemData(i, {'full_name': display_name, 'list_index': i}, Qt.ItemDataRole.UserRole)
-            if len(display_name) > max_cb_len:
-                combobox.setItemData(i, display_name, Qt.ItemDataRole.ToolTipRole)
-        new_index_to_select = -1
-        if 0 <= current_internal_index < len(target_list):
-            new_index_to_select = current_internal_index
-        elif len(target_list) > 0:
-            print(f'Warning: Internal index {current_internal_index} invalid for list {image_number} (size {len(target_list)}). Selecting index 0.')
-            new_index_to_select = 0
-            if image_number == 1:
-                self.current_index1 = 0
-            else:
-                self.current_index2 = 0
-        if new_index_to_select != -1:
-            combobox.setCurrentIndex(new_index_to_select)
-        combobox.blockSignals(False)
+        if not hasattr(combobox, 'blockSignals'):
+            print(f'Warning: ComboBox {image_number} does not have blockSignals method.')
+            return
+        img_list = self.image_list1 if image_number == 1 else self.image_list2
+        try:
+            combobox.blockSignals(True)
+            combobox.clear()
+            if img_list:
+                for i, full_path in enumerate(img_list):
+                    try:
+                        display_name = os.path.basename(full_path)
+                        if image_number == 1:
+                            name_override = getattr(self, 'edit_name1', None)
+                            if name_override and hasattr(name_override, 'text') and i == self.current_index1:
+                                custom_text = name_override.text().strip()
+                                if custom_text:
+                                    display_name = custom_text
+                        elif image_number == 2:
+                            name_override = getattr(self, 'edit_name2', None)
+                            if name_override and hasattr(name_override, 'text') and i == self.current_index2:
+                                custom_text = name_override.text().strip()
+                                if custom_text:
+                                    display_name = custom_text
+                        combobox.addItem(display_name)
+                        # 使用setProperty方法代替setItemData，或将数据存储在其他地方
+                        combobox.setProperty(f"item_{i}_data", {'full_name': display_name, 'list_index': i})
+                    except Exception as e:
+                        print(f'Error adding item {i} to combobox {image_number}: {e}')
+                current_index = self.current_index1 if image_number == 1 else self.current_index2
+                if 0 <= current_index < len(img_list):
+                    combobox.setCurrentIndex(current_index)
+                    if hasattr(combobox, 'currentIndexChanged'):
+                        try:
+                            combobox.currentIndexChanged.emit(current_index)
+                        except (TypeError, AttributeError) as e_emit:
+                            print(f'Warning: Could not emit currentIndexChanged for combobox {image_number}: {e_emit}')
+                            pass
+            combobox.blockSignals(False)
+        except Exception as e:
+            print(f'ERROR in _update_combobox({image_number}): {e}')
+            combobox.blockSignals(False)
 
     def _on_combobox_changed(self, image_number, index):
-        target_list = self.image_list1 if image_number == 1 else self.image_list2
-        current_internal_index = self.current_index1 if image_number == 1 else self.current_index2
-        if 0 <= index < len(target_list):
-            if index != current_internal_index:
-                print(f'Combobox {image_number} changed to index: {index}')
+        if index < 0:
+            return
+        combobox = self.combo_image1 if image_number == 1 else self.combo_image2
+        img_list = self.image_list1 if image_number == 1 else self.image_list2
+        try:
+            # 从属性中获取存储的数据
+            item_data = combobox.property(f"item_{index}_data")
+            list_index = item_data.get('list_index', -1) if item_data else -1
+            if list_index >= 0 and list_index < len(img_list):
                 if image_number == 1:
-                    self.current_index1 = index
+                    old_index = self.current_index1
+                    self.current_index1 = list_index
+                    print(f'Changed image list 1 selection: {old_index} -> {list_index}')
                 else:
-                    self.current_index2 = index
-                self._set_current_image(image_number, trigger_update=True)
-        elif index == -1:
-            if current_internal_index != -1:
-                print(f'Combobox {image_number} selection cleared (index -1)')
-                if image_number == 1:
-                    self.current_index1 = -1
-                else:
-                    self.current_index2 = -1
-                self._set_current_image(image_number, trigger_update=True)
+                    old_index = self.current_index2
+                    self.current_index2 = list_index
+                    print(f'Changed image list 2 selection: {old_index} -> {list_index}')
+                self._set_current_image(image_number)
+        except Exception as e:
+            print(f'ERROR in _on_combobox_changed({image_number}, {index}): {e}')
+            traceback.print_exc()
 
     def _on_edit_name_changed(self):
         sender_widget = self.sender()
@@ -1341,47 +1359,55 @@ class ImageComparisonApp(QWidget):
             print(f'Warning: Cannot update name for slot {image_number}, index {current_index} is invalid.')
 
     def swap_images(self):
-        self.image_list1, self.image_list2 = (self.image_list2, self.image_list1)
-        self.current_index1, self.current_index2 = (self.current_index2, self.current_index1)
+        print('Swapping image lists')
+        
+        # 备份当前状态
+        temp_list1 = self.image_list1.copy()
+        temp_list2 = self.image_list2.copy()
+        temp_index1 = self.current_index1
+        temp_index2 = self.current_index2
+        
+        # 交换图像列表和索引
+        self.image_list1 = temp_list2
+        self.image_list2 = temp_list1
+        self.current_index1 = temp_index2
+        self.current_index2 = temp_index1
+        
+        # 更新ComboBox和当前图像
         self._update_combobox(1)
         self._update_combobox(2)
         self._set_current_image(1, trigger_update=False)
         self._set_current_image(2, trigger_update=True)
+        
+        print('Image lists swapped successfully')
 
     def clear_image_list(self, image_number):
-        print(f'Clearing image list {image_number}...')
-        if image_number == 1:
-            target_list = self.image_list1
-            combobox = self.combo_image1 if hasattr(self, 'combo_image1') else None
-            edit_name_widget = self.edit_name1 if hasattr(self, 'edit_name1') else None
-            self.current_index1 = -1
-            self.original_image1 = None
-            self.image1_path = None
-            self.image1 = None
-        elif image_number == 2:
-            target_list = self.image_list2
-            combobox = self.combo_image2 if hasattr(self, 'combo_image2') else None
-            edit_name_widget = self.edit_name2 if hasattr(self, 'edit_name2') else None
-            self.current_index2 = -1
-            self.original_image2 = None
-            self.image2_path = None
-            self.image2 = None
-        else:
-            print(f'Warning: Invalid image_number {image_number} passed to clear_image_list.')
+        if image_number not in (1, 2):
+            print(f'Warning: Invalid image_number ({image_number}) in clear_image_list')
             return
-        target_list.clear()
-        if combobox:
-            combobox.blockSignals(True)
-            combobox.clear()
-            combobox.blockSignals(False)
-        if edit_name_widget:
-            edit_name_widget.blockSignals(True)
-            edit_name_widget.clear()
-            edit_name_widget.blockSignals(False)
-        self.update_comparison_if_needed()
-        self.update_file_names()
-        self.check_name_lengths()
-        self._update_resolution_labels()
+        
+        # 确定要清除的列表
+        img_list = self.image_list1 if image_number == 1 else self.image_list2
+        
+        # 检查列表是否为空
+        if not img_list:
+            print(f'Image list {image_number} is already empty')
+            return
+            
+        # 清空列表
+        img_list.clear()
+        
+        # 重置索引
+        if image_number == 1:
+            self.current_index1 = -1
+        else:
+            self.current_index2 = -1
+            
+        # 更新UI
+        self._update_combobox(image_number)
+        self._set_current_image(image_number)
+        
+        print(f'Image list {image_number} cleared successfully')
 
     def _save_result_with_error_handling(self):
         try:
@@ -1682,15 +1708,17 @@ class ImageComparisonApp(QWidget):
             self.update_comparison_if_needed()
 
     def _open_color_dialog(self):
-        options = QColorDialog.ColorDialogOption.ShowAlphaChannel
-        color = QColorDialog.getColor(self.file_name_color, self, tr('Select Filename Color', self.current_language), options=options)
-        if color.isValid() and color != self.file_name_color:
-            self.file_name_color = color
-            print(f'Filename color changed to: {color.name(QColor.NameFormat.HexArgb)}')
-            self._update_color_button_tooltip()
-            self.save_setting('filename_color', color.name(QColor.NameFormat.HexArgb))
-            if hasattr(self, 'checkbox_file_names') and self.checkbox_file_names.isChecked():
-                self.update_comparison_if_needed()
+        color_dialog = ColorDialog(self.file_name_color, tr('Select Filename Color', self.current_language), self)
+        color_dialog.enableAlphaChannel()
+        if color_dialog.exec():
+            color = color_dialog.selectedColor()
+            if color.isValid() and color != self.file_name_color:
+                self.file_name_color = color
+                print(f'Filename color changed to: {color.name(QColor.NameFormat.HexArgb)}')
+                self._update_color_button_tooltip()
+                self.save_setting('filename_color', color.name(QColor.NameFormat.HexArgb))
+                if hasattr(self, 'checkbox_file_names') and self.checkbox_file_names.isChecked():
+                    self.update_comparison_if_needed()
 
     def _update_color_button_tooltip(self):
         if hasattr(self, 'btn_color_picker'):
@@ -1982,7 +2010,12 @@ class ImageComparisonApp(QWidget):
 
     def _open_settings_dialog(self):
         if not settings_dialog_available or SettingsDialog is None:
-            QMessageBox.warning(self, self.tr('Error', self.current_language), self.tr('Settings dialog module could not be loaded.', self.current_language) + '\n(Ensure settings_dialog.py exists and is error-free)')
+            MessageBox(
+                self.tr('Error', self.current_language),
+                self.tr('Settings dialog module could not be loaded.', self.current_language) + 
+                '\n(Ensure settings_dialog.py exists and is error-free)',
+                self
+            ).exec()
             return
         dialog = SettingsDialog(current_language=self.current_language, current_max_length=self.max_name_length, min_limit=self.MIN_NAME_LENGTH_LIMIT, max_limit=self.MAX_NAME_LENGTH_LIMIT, current_jpeg_quality=self.jpeg_quality, parent=self, tr_func=tr)
         result = dialog.exec()
@@ -2008,9 +2041,17 @@ class ImageComparisonApp(QWidget):
                 if new_lang != self.current_language:
                     self.change_language(new_lang)
             except AttributeError:
-                QMessageBox.warning(self, self.tr('Error', self.current_language), 'Failed to get settings from dialog (get_settings method missing or incorrect?).')
+                MessageBox(
+                    self.tr('Error', self.current_language),
+                    'Failed to get settings from dialog (get_settings method missing or incorrect?)',
+                    self
+                ).exec()
             except Exception as e:
-                QMessageBox.warning(self, self.tr('Error', self.current_language), f'Error processing settings dialog results: {e}')
+                MessageBox(
+                    self.tr('Error', self.current_language),
+                    f'Error processing settings dialog results: {e}',
+                    self
+                ).exec()
                 traceback.print_exc()
 
     def _save_animation_with_error_handling(self):
@@ -2019,37 +2060,61 @@ class ImageComparisonApp(QWidget):
         """
         try:
             if not self.original_image1 or not self.original_image2:
-                QMessageBox.warning(self, tr('Warning', self.current_language), 
-                                  tr('Please load and select images in both slots first.', self.current_language))
+                MessageBox(
+                    tr('Warning', self.current_language), 
+                    tr('Please load and select images in both slots first.', self.current_language),
+                    self
+                ).exec()
                 return
             if not self.image1 or not self.image2:
                 print('Resized images missing before animation save, attempting resize...')
                 resize_images_processor(self)
                 if not self.image1 or not self.image2:
-                    QMessageBox.warning(self, tr('Warning', self.current_language), 
-                                      tr('Resized images not available. Cannot create animation. Please reload or select images.', self.current_language))
+                    MessageBox(
+                        tr('Warning', self.current_language), 
+                        tr('Resized images not available. Cannot create animation. Please reload or select images.', self.current_language),
+                        self
+                    ).exec()
                     return
                     
             # Check if the animation processor function is available
             if 'save_animation_processor' not in globals() and not hasattr(image_processing_mod, 'save_animation_processor'):
-                QMessageBox.warning(self, tr('Warning', self.current_language),
-                                  tr('Animation export function not available. Please check if the required modules are installed.', self.current_language))
+                MessageBox(
+                    tr('Warning', self.current_language),
+                    tr('Animation export function not available. Please check if the required modules are installed.', self.current_language),
+                    self
+                ).exec()
                 return
                 
             # Call the animation processor
             if hasattr(image_processing_mod, 'save_animation_processor'):
                 save_animation_processor(self)
             else:
-                QMessageBox.warning(self, tr('Warning', self.current_language),
-                                  tr('Animation export function not found. Please check your installation.', self.current_language))
+                MessageBox(
+                    tr('Warning', self.current_language),
+                    tr('Animation export function not found. Please check your installation.', self.current_language),
+                    self
+                ).exec()
                 
         except Exception as e:
             print(f'ERROR during save_animation_processor call: {e}')
             traceback.print_exc()
-            QMessageBox.critical(self, tr('Error', self.current_language), 
-                               f"{tr('Failed to create animation:', self.current_language)}\n{str(e)}")
+            MessageBox(
+                tr('Error', self.current_language), 
+                f"{tr('Failed to create animation:', self.current_language)}\n{str(e)}",
+                self
+            ).exec()
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    
+    # 设置程序基本信息
+    app.setApplicationName("Improve ImgSLI")
+    app.setApplicationDisplayName("Improve ImgSLI")
+    app.setOrganizationName("MyCompany")
+    
+    # 应用Fluent样式
+    FluentStyleSheet.applyToApp()
+    
     window = ImageComparisonApp()
     window.show()
     sys.exit(app.exec())

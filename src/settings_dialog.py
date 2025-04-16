@@ -1,7 +1,13 @@
 import base64
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QGroupBox, QRadioButton, QLabel, QSpinBox, QDialogButtonBox, QSizePolicy
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QGroupBox, QSizePolicy
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtCore import QSize, Qt
+
+# 导入Fluent控件
+from qfluentwidgets import (RadioButton, SpinBox, PushButton, 
+                          BodyLabel, TitleLabel, FluentStyleSheet,
+                          MessageBox)
+
 try:
     from translations import tr as app_tr
 except ImportError:
@@ -22,15 +28,23 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.tr = tr_func if callable(tr_func) else app_tr
         self.current_language = current_language
+        
+        # 应用Fluent样式到对话框
+        FluentStyleSheet.applyToWidget(self)
+        
         self.setWindowTitle(self.tr('Settings', self.current_language))
         self.setMinimumWidth(350)
         main_layout = QVBoxLayout(self)
-        lang_group_box = QGroupBox(self.tr('Language:', self.current_language))
+        
+        # 使用标题标签代替组框
+        lang_title = TitleLabel(self.tr('Language:', self.current_language))
+        main_layout.addWidget(lang_title)
+        
         lang_layout = QHBoxLayout()
-        self.radio_en = QRadioButton('English')
-        self.radio_ru = QRadioButton('Русский')
-        self.radio_zh = QRadioButton('中文')
-        self.radio_pt_br = QRadioButton('Português (BR)')
+        self.radio_en = RadioButton('English')
+        self.radio_ru = RadioButton('Русский')
+        self.radio_zh = RadioButton('中文')
+        self.radio_pt_br = RadioButton('Português (BR)')
         self._setup_language_radio(self.radio_en, 'en', FLAG_ICONS.get('en'))
         self._setup_language_radio(self.radio_ru, 'ru', FLAG_ICONS.get('ru'))
         self._setup_language_radio(self.radio_zh, 'zh', FLAG_ICONS.get('zh'))
@@ -40,8 +54,8 @@ class SettingsDialog(QDialog):
         lang_layout.addWidget(self.radio_zh)
         lang_layout.addWidget(self.radio_pt_br)
         lang_layout.addStretch()
-        lang_group_box.setLayout(lang_layout)
-        main_layout.addWidget(lang_group_box)
+        main_layout.addLayout(lang_layout)
+        
         if current_language == 'en':
             self.radio_en.setChecked(True)
         elif current_language == 'ru':
@@ -52,9 +66,11 @@ class SettingsDialog(QDialog):
             self.radio_pt_br.setChecked(True)
         else:
             self.radio_en.setChecked(True)
+            
+        # 最大名称长度设置
         length_layout = QHBoxLayout()
-        length_label = QLabel(self.tr('Maximum Name Length (UI):', self.current_language))
-        self.spin_max_length = QSpinBox()
+        length_label = BodyLabel(self.tr('Maximum Name Length (UI):', self.current_language))
+        self.spin_max_length = SpinBox()
         self.spin_max_length.setRange(min_limit, max_limit)
         clamped_current_max_length = max(min_limit, min(max_limit, current_max_length))
         self.spin_max_length.setValue(clamped_current_max_length)
@@ -64,9 +80,11 @@ class SettingsDialog(QDialog):
         length_layout.addWidget(length_label)
         length_layout.addWidget(self.spin_max_length)
         main_layout.addLayout(length_layout)
+        
+        # JPEG质量设置
         jpeg_quality_layout = QHBoxLayout()
-        jpeg_quality_label = QLabel(self.tr('JPEG Quality:', self.current_language))
-        self.spin_jpeg_quality = QSpinBox()
+        jpeg_quality_label = BodyLabel(self.tr('JPEG Quality:', self.current_language))
+        self.spin_jpeg_quality = SpinBox()
         self.spin_jpeg_quality.setRange(1, 100)
         clamped_jpeg_quality = max(1, min(100, current_jpeg_quality))
         self.spin_jpeg_quality.setValue(clamped_jpeg_quality)
@@ -74,14 +92,18 @@ class SettingsDialog(QDialog):
         jpeg_quality_layout.addWidget(jpeg_quality_label)
         jpeg_quality_layout.addWidget(self.spin_jpeg_quality)
         main_layout.addLayout(jpeg_quality_layout)
-        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        ok_button = button_box.button(QDialogButtonBox.StandardButton.Ok)
-        ok_button.setText(self.tr('OK', self.current_language))
-        cancel_button = button_box.button(QDialogButtonBox.StandardButton.Cancel)
-        cancel_button.setText(self.tr('Cancel', self.current_language))
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        main_layout.addWidget(button_box)
+        
+        # 按钮布局
+        button_layout = QHBoxLayout()
+        self.ok_button = PushButton(self.tr('OK', self.current_language))
+        self.cancel_button = PushButton(self.tr('Cancel', self.current_language))
+        self.ok_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+        button_layout.addStretch()
+        button_layout.addWidget(self.cancel_button)
+        button_layout.addWidget(self.ok_button)
+        main_layout.addLayout(button_layout)
+        
         self.setLayout(main_layout)
 
     def _setup_language_radio(self, radio_button, lang_code, base64_icon):
@@ -102,7 +124,6 @@ class SettingsDialog(QDialog):
             print(f"Warning: No base64 icon data provided for language '{lang_code}' in SettingsDialog.")
         radio_button.setIcon(icon)
         radio_button.setIconSize(QSize(24, 16))
-        radio_button.setStyleSheet('\n            QRadioButton {\n                spacing: 5px;\n                border: 1px solid transparent;\n                padding: 2px;\n                background-color: transparent;\n                border-radius: 3px;\n            }\n            QRadioButton::indicator { width: 0px; height: 0px; }\n            QRadioButton:checked { border: 1px solid palette(highlight); }\n            QRadioButton:hover { background-color: palette(alternate-base); }\n        ')
         lang_name = lang_code
         tooltip_key = f'Switch language to {lang_code}'
         if lang_code == 'en':
