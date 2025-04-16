@@ -192,16 +192,19 @@ def update_comparison_processor(app):
     try:
         if not app.is_horizontal:
             split_pos_abs = max(0, min(width, int(round(width * app.split_position))))
+            
+            result.paste(img2_rgba, (0, 0))
+            
             if split_pos_abs > 0:
                 result.paste(img1_rgba.crop((0, 0, split_pos_abs, height)), (0, 0))
-            if split_pos_abs < width:
-                result.paste(img2_rgba.crop((split_pos_abs, 0, width, height)), (split_pos_abs, 0))
         else:
             split_pos_abs = max(0, min(height, int(round(height * app.split_position))))
+            
+            result.paste(img2_rgba, (0, 0))
+            
             if split_pos_abs > 0:
                 result.paste(img1_rgba.crop((0, 0, width, split_pos_abs)), (0, 0))
-            if split_pos_abs < height:
-                result.paste(img2_rgba.crop((0, split_pos_abs, width, height)), (0, split_pos_abs))
+                
         app.result_image = result
         display_result_processor(app)
     except ValueError as ve:
@@ -980,48 +983,86 @@ def save_animation_processor(self):
         img2_array = np.array(img2_rgb)
         
         # Get dimensions
-        width, height = self.image1.size
+        height, width = img1_array.shape[:2] # Note: Numpy shape is (height, width, channels)
         
-        # Function to create each frame with a scanning line at position t
+        # Function to create each frame with a scanning line at time t
         def make_frame(t):
-            # t goes from 0 to duration, map it to 0-1 for split position
-            progress = min(1.0, t / duration)
-            split_pos = int(width * progress)
+            # t goes from 0 to duration
+            progress = t / duration
             
-            # Create a fresh array for this frame
+            # Handle exact start and end cases explicitly for clean start/end
+            if progress <= 0.0:
+                # Start: Show only image 2, no line
+                return img2_array.copy()
+                
+            # Reserve the last portion of the animation (5 frames worth) to show just image1
+            # Calculate the actual transition duration
+            # For a 30fps video: 5/30 = 0.167 seconds; for 15fps GIF: 5/15 = 0.333 seconds
+            # Use an approximation that works for both cases
+            frames_per_second = 30  # Base calculation on standard rate
+            static_end_time = 5.0 / frames_per_second  # Time for 5 frames
+            transition_portion = 1.0 - (static_end_time / duration)
+            
+            # If we've reached the static end portion, show only image 1
+            if progress >= transition_portion:
+                return img1_array.copy()
+                
+            # Otherwise, compute the frame as before, but normalize progress to the transition portion
+            normalized_progress = progress / transition_portion
+            
+            # Intermediate frame: Mix of image2 and image1 with a line
+            # Split position moves from left to right, gradually replacing image2 with image1
+            split_pos = int(round(width * normalized_progress))
+            # Clamp split_pos to be within [0, width] inclusive for safety
+            split_pos = max(0, min(width, split_pos)) 
+            
+            # Create frame by combining parts of image2 and image1
             frame = np.zeros_like(img1_array)
-            
-            # Copy left part from image1
-            if split_pos > 0:
+            if split_pos > 0: # Copy left part from image1 (columns 0 to split_pos-1)
                 frame[:, :split_pos, :] = img1_array[:, :split_pos, :]
-            
-            # Copy right part from image2
-            if split_pos < width:
+            if split_pos < width: # Copy right part from image2 (columns split_pos to width-1)
                 frame[:, split_pos:, :] = img2_array[:, split_pos:, :]
-            
-            # Draw a line at the split position
-            line_thickness = max(1, min(5, int(width * 0.005)))
-            line_start = max(0, split_pos - line_thickness // 2)
-            line_end = min(width, split_pos + line_thickness // 2 + line_thickness % 2)
-            
-            if line_start < line_end:
-                # Create a vertical line with a semi-transparent white/black gradient
-                for i in range(line_start, line_end):
-                    alpha = 0.7 * (1 - abs(i - split_pos) / (line_thickness / 2 + 0.1))
-                    # Use white line on dark pixels, black line on light pixels
-                    brightness = (frame[:, i, 0].astype(float) + frame[:, i, 1].astype(float) + frame[:, i, 2].astype(float)) / 3
-                    is_dark = brightness < 128
+                
+            # Draw the blended line centered around the split position
+            line_center_pos = split_pos
+            # Ensure thickness doesn't exceed image width/sensible limits
+            line_thickness = max(1, min(min(5, width // 2), int(round(width * 0.005)))) 
+            half_thick_floor = line_thickness // 2
+            half_thick_ceil = (line_thickness + 1) // 2 # Accounts for odd thickness
+
+            # Calculate the range of column indices for the line, clamped to image bounds
+            line_start_col = max(0, line_center_pos - half_thick_floor)
+            line_end_col = min(width, line_center_pos + half_thick_ceil) # Exclusive index for range
+
+            if line_start_col < line_end_col:
+                for i in range(line_start_col, line_end_col):
+                    # Base color is the pixel from the combined frame BEFORE drawing the line
+                    base_pixel_rgb = frame[:, i, :].astype(np.float32)
                     
-                    # Create mask for dark and light pixels
-                    dark_mask = is_dark.reshape(-1, 1).repeat(3, axis=1)
-                    light_mask = ~dark_mask
+                    # Calculate alpha (transparency) based on distance from the line's center
+                    # Alpha is max (0.7) at the center, falls off linearly to 0 at edges
+                    dist_from_center = abs(i - line_center_pos)
+                    # Avoid division by zero if thickness is 0 or 1
+                    max_dist = (line_thickness / 2.0) if line_thickness >= 1 else 0.1 
+                    alpha = 0.7 * max(0.0, 1.0 - dist_from_center / max_dist)
+                    alpha = min(alpha, 1.0) # Ensure alpha <= 1.0
+
+                    # Determine line color (white or black) based on the base pixel brightness
+                    brightness = np.mean(base_pixel_rgb, axis=1)
+                    # Create masks for applying white/black line color
+                    # Note: Using np.newaxis to make brightness (height,) compatible with (height, 3)
+                    is_dark_mask = brightness < 128 
                     
-                    # Blend line with original pixels
-                    white_line = frame[:, i].astype(float) * (1 - alpha) + 255 * alpha
-                    black_line = frame[:, i].astype(float) * (1 - alpha)
+                    # Blend: (1-alpha)*base + alpha*line_color
+                    # White line (255) for dark areas, Black line (0) for light areas
+                    white_line_blend = base_pixel_rgb * (1.0 - alpha) + 255.0 * alpha
+                    black_line_blend = base_pixel_rgb * (1.0 - alpha) + 0.0 * alpha
                     
-                    # Apply white line to dark pixels, black line to light pixels
-                    frame[:, i] = (dark_mask * white_line + light_mask * black_line).astype(np.uint8)
+                    # Apply the correct blend based on the mask
+                    blended_pixel = np.where(is_dark_mask[:, np.newaxis], white_line_blend, black_line_blend)
+
+                    # Clip results and convert back to uint8
+                    frame[:, i, :] = np.clip(blended_pixel, 0, 255).astype(np.uint8)
             
             return frame
         
