@@ -30,7 +30,8 @@ class SettingsDialog(QDialog):
         self.current_language = current_language
         
         # 应用Fluent样式到对话框
-        FluentStyleSheet.applyToWidget(self)
+        # FluentStyleSheet.applyToWidget(self)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         
         self.setWindowTitle(self.tr('Settings', self.current_language))
         self.setMinimumWidth(350)

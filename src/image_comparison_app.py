@@ -1714,8 +1714,8 @@ class ImageComparisonApp(QWidget):
             self.update_comparison_if_needed()
 
     def _open_color_dialog(self):
-        color_dialog = ColorDialog(self.file_name_color, tr('Select Filename Color', self.current_language), self)
-        color_dialog.enableAlphaChannel()
+        color_dialog = QColorDialog(self.file_name_color, self)
+        color_dialog.setOption(QColorDialog.ColorDialogOption.ShowAlphaChannel)
         if color_dialog.exec():
             color = color_dialog.selectedColor()
             if color.isValid() and color != self.file_name_color:
