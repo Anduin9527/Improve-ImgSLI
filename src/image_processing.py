@@ -12,6 +12,16 @@ except ImportError:
 
     def tr(text, lang='en', *args, **kwargs):
         return text
+        
+# For video/GIF export
+try:
+    import numpy as np
+    from moviepy.editor import VideoClip
+    video_export_available = True
+except ImportError:
+    print("Warning: moviepy not found. Video/GIF export will be disabled.")
+    video_export_available = False
+
 MIN_CAPTURE_THICKNESS = 1
 MAX_CAPTURE_THICKNESS = 4
 CAPTURE_THICKNESS_FACTOR = 0.35
@@ -651,24 +661,26 @@ def save_result_processor(self):
                 print('ERROR: Mismatched sizes persist after resize attempt. Aborting save.')
                 QMessageBox.warning(self, tr('Error', self.current_language), tr('Internal error: Image sizes do not match. Cannot save.', self.current_language))
                 return
-        img1_rgba = self.image1
-        img2_rgba = self.image2
-        width, height = img1_rgba.size
+        img1_rgb = self.image1.convert('RGB')
+        img2_rgb = self.image2.convert('RGB')
+        img1_array = np.array(img1_rgb)
+        img2_array = np.array(img2_rgb)
+        width, height = img1_array.shape[:2]
         image_to_save = Image.new('RGBA', (width, height))
         split_position_abs = 0
         try:
             if not self.is_horizontal:
                 split_position_abs = max(0, min(width, int(round(width * self.split_position))))
                 if split_position_abs > 0:
-                    image_to_save.paste(img1_rgba.crop((0, 0, split_position_abs, height)), (0, 0))
+                    image_to_save.paste(img1_rgb.crop((0, 0, split_position_abs, height)), (0, 0))
                 if split_position_abs < width:
-                    image_to_save.paste(img2_rgba.crop((split_position_abs, 0, width, height)), (split_position_abs, 0))
+                    image_to_save.paste(img2_rgb.crop((split_position_abs, 0, width, height)), (split_position_abs, 0))
             else:
                 split_position_abs = max(0, min(height, int(round(height * self.split_position))))
                 if split_position_abs > 0:
-                    image_to_save.paste(img1_rgba.crop((0, 0, width, split_position_abs)), (0, 0))
+                    image_to_save.paste(img1_rgb.crop((0, 0, width, split_position_abs)), (0, 0))
                 if split_position_abs < height:
-                    image_to_save.paste(img2_rgba.crop((0, split_position_abs, width, height)), (0, split_position_abs))
+                    image_to_save.paste(img2_rgb.crop((0, split_position_abs, width, height)), (0, split_position_abs))
         except Exception as paste_err:
             print(f'ERROR creating base image for saving: {paste_err}')
             QMessageBox.critical(self, tr('Error', self.current_language), tr('Failed to create the base image for saving.', self.current_language))
@@ -927,3 +939,146 @@ def draw_horizontal_filenames(self, draw, font, file_name1, file_name2, split_po
                 draw.text((ideal_x2, ideal_y2_top), file_name2, fill=text_color, font=font, anchor='lt')
         except Exception as e:
             print(f'Error processing or drawing filename 2 (horizontal): {e}')
+
+def save_animation_processor(self):
+    """
+    Create and save an animation showing a scanning line moving from left to right
+    to show gradual transition between the two images.
+    """
+    if not video_export_available:
+        QMessageBox.warning(self, tr('Warning', self.current_language),
+                          tr('Video export is not available. Please install the required dependencies.', self.current_language))
+        return
+        
+    if not self.original_image1 or not self.original_image2:
+        QMessageBox.warning(self, tr('Warning', self.current_language), 
+                          tr('Please load and select images in both slots first.', self.current_language))
+        return
+    
+    try:
+        if not self.image1 or not self.image2:
+            print('Warning: Resized images (self.image1/2) missing in save_animation_processor. Attempting resize.')
+            resize_images_processor(self)
+            if not self.image1 or not self.image2:
+                QMessageBox.warning(self, tr('Warning', self.current_language), 
+                                  tr('Resized images not available. Cannot create animation.', self.current_language))
+                return
+        
+        if self.image1.size != self.image2.size:
+            print(f'ERROR: Mismatched image sizes in save_animation_processor: {self.image1.size} vs {self.image2.size}. Retrying resize.')
+            resize_images_processor(self)
+            if not self.image1 or not self.image2 or self.image1.size != self.image2.size:
+                print('ERROR: Mismatched sizes persist after resize attempt. Aborting animation.')
+                QMessageBox.warning(self, tr('Error', self.current_language), 
+                                  tr('Internal error: Image sizes do not match. Cannot create animation.', self.current_language))
+                return
+        
+        # Convert PIL images to numpy arrays for moviepy
+        img1_rgb = self.image1.convert('RGB')
+        img2_rgb = self.image2.convert('RGB')
+        img1_array = np.array(img1_rgb)
+        img2_array = np.array(img2_rgb)
+        
+        # Get dimensions
+        width, height = self.image1.size
+        
+        # Function to create each frame with a scanning line at position t
+        def make_frame(t):
+            # t goes from 0 to duration, map it to 0-1 for split position
+            progress = min(1.0, t / duration)
+            split_pos = int(width * progress)
+            
+            # Create a fresh array for this frame
+            frame = np.zeros_like(img1_array)
+            
+            # Copy left part from image1
+            if split_pos > 0:
+                frame[:, :split_pos, :] = img1_array[:, :split_pos, :]
+            
+            # Copy right part from image2
+            if split_pos < width:
+                frame[:, split_pos:, :] = img2_array[:, split_pos:, :]
+            
+            # Draw a line at the split position
+            line_thickness = max(1, min(5, int(width * 0.005)))
+            line_start = max(0, split_pos - line_thickness // 2)
+            line_end = min(width, split_pos + line_thickness // 2 + line_thickness % 2)
+            
+            if line_start < line_end:
+                # Create a vertical line with a semi-transparent white/black gradient
+                for i in range(line_start, line_end):
+                    alpha = 0.7 * (1 - abs(i - split_pos) / (line_thickness / 2 + 0.1))
+                    # Use white line on dark pixels, black line on light pixels
+                    brightness = (frame[:, i, 0].astype(float) + frame[:, i, 1].astype(float) + frame[:, i, 2].astype(float)) / 3
+                    is_dark = brightness < 128
+                    
+                    # Create mask for dark and light pixels
+                    dark_mask = is_dark.reshape(-1, 1).repeat(3, axis=1)
+                    light_mask = ~dark_mask
+                    
+                    # Blend line with original pixels
+                    white_line = frame[:, i].astype(float) * (1 - alpha) + 255 * alpha
+                    black_line = frame[:, i].astype(float) * (1 - alpha)
+                    
+                    # Apply white line to dark pixels, black line to light pixels
+                    frame[:, i] = (dark_mask * white_line + light_mask * black_line).astype(np.uint8)
+            
+            return frame
+        
+        # Create a video clip
+        duration = 3.0  # seconds
+        clip = VideoClip(make_frame, duration=duration)
+        
+        # Ask user for save location and format
+        file_filter = tr('GIF Animation', self.current_language) + ' (*.gif);;' + \
+                    tr('MP4 Video', self.current_language) + ' (*.mp4);;' + \
+                    tr('All Files', self.current_language) + ' (*)'
+                    
+        file_name, selected_filter = QFileDialog.getSaveFileName(
+            self, tr('Save Animation', self.current_language), '', file_filter)
+            
+        if not file_name:
+            return
+            
+        # Add appropriate extension if not provided
+        _, ext = os.path.splitext(file_name)
+        if not ext:
+            if 'GIF' in selected_filter:
+                file_name += '.gif'
+            elif 'MP4' in selected_filter:
+                file_name += '.mp4'
+            else:
+                file_name += '.mp4'  # Default to mp4
+                
+        # Set fps based on file type (lower for GIF to reduce size)
+        fps = 15 if file_name.lower().endswith('.gif') else 30
+                
+        # Save the animation
+        try:
+            if file_name.lower().endswith('.gif'):
+                clip.write_gif(file_name, fps=fps)
+                print(f'Animation successfully saved as GIF: {file_name}')
+            else:
+                clip.write_videofile(file_name, fps=fps, codec='libx264', audio=False)
+                print(f'Animation successfully saved as video: {file_name}')
+                
+            QMessageBox.information(
+                self, tr('Success', self.current_language),
+                tr('Animation successfully saved:', self.current_language) + f'\n{file_name}'
+            )
+        except Exception as e_save:
+            QMessageBox.critical(
+                self, tr('Error', self.current_language), 
+                f"{tr('Failed to save animation:', self.current_language)}\n{file_name}\n\n{str(e_save)}"
+            )
+            print(f'ERROR during animation save operation: {e_save}')
+            traceback.print_exc()
+            
+    except Exception as e_outer:
+        print(f'ERROR in save_animation_processor (outer): {e_outer}')
+        traceback.print_exc()
+        error_path_msg = file_name if 'file_name' in locals() else tr('Path not determined', self.current_language)
+        QMessageBox.critical(
+            self, tr('Error', self.current_language),
+            f"{tr('An unexpected error occurred during the animation process:', self.current_language)}\n{error_path_msg}\n\n{str(e_outer)}"
+        )

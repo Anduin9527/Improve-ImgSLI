@@ -43,6 +43,7 @@ Improved ImgSLI is an open-source, non-proprietary software designed for intuiti
 *   Display original resolution (WxH) for each loaded image.
 *   Automatic resizing of images to match the largest dimensions for consistent comparison.
 *   Save the current comparison view (including split line, magnifier, capture marker, and optional file names) as a full-resolution image.
+*   Export animated GIF or MP4 videos showing a scanning line transition from left image to right image.
 
 **Magnifier Tool:**
 *   Powerful Magnifier for close inspection.
@@ -110,6 +111,7 @@ flatpak run io.github.Loganavter.Improve-ImgSLI
 3.  **Compare:** In the standard comparison mode, click and drag the mouse on the image to move the separator line. Use the "Horizontal Split" checkbox to change the split orientation.
 4.  **Magnify:** Activate the Magnifier tool via its checkbox. In this mode, clicking or dragging on the image sets the central capture point. Use WASD keys to move the magnified view areas independently. Use Q/E keys to adjust the distance between the magnifier circles. You can also freeze the capture point using the corresponding checkbox (WASD will then move the frozen point).
 5.  **Save:** Click the "Save Result" button in the UI to export the current comparison view as a single image file.
+6.  **Create Animation:** Click the "Save Animation" button to export a GIF or MP4 animation that shows a scanning line moving from left to right, visually transitioning between the two images.
 
 https://github.com/user-attachments/assets/f2c843c2-31eb-4fb9-8eef-2d28630f2baf
 
@@ -138,7 +140,7 @@ This project is distributed under the MIT License. See the [LICENSE](https://git
 
 Originally, Improve ImgSLI was fully crafted by ChatGPT in September 2024 to simplify creating comparison images for my work, offering basic image comparison functionality. In October, I discovered Claude and used it to enhance the tool with a magnifier feature and drag-and-drop support.
 
-By November, with Claude’s help, I refined the magnifier, adding options to freeze the view position and merge magnifiers. However, the growing codebase—coupled with Claude’s 8k token context limit—made full regeneration impossible, forcing me to manually edit sections. I turned to Gemini, which assisted in integrating changes, though not all generated code was successful. Some features were postponed, and others were intentionally disabled to avoid bugs.
+By November, with Claude's help, I refined the magnifier, adding options to freeze the view position and merge magnifiers. However, the growing codebase—coupled with Claude's 8k token context limit—made full regeneration impossible, forcing me to manually edit sections. I turned to Gemini, which assisted in integrating changes, though not all generated code was successful. Some features were postponed, and others were intentionally disabled to avoid bugs.
 
 In early December, I experimented with adaptive magnifier positioning tied to window resizing, but the results were unsatisfactory, and I abandoned the effort. Then, in January 2025, a user [request](https://github.com/Loganavter/Improve-ImgSLI/issues/1) to enable window resizing prompted me to explore DeepSeek—a breakthrough AI with Chain-of-Thought reasoning at the time. DeepSeek helped implement this feature, while Gemini seamlessly incorporated it and other updates into the existing code.
 

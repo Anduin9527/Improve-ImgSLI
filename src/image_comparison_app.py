@@ -1,32 +1,40 @@
-import base64
 import os
-import math
 import sys
-import importlib
+import math
+import time
 import traceback
+import importlib
+import base64
+from datetime import datetime
+import os.path
+import platform
 from PIL import Image, UnidentifiedImageError
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox, QSlider, QLabel, QFileDialog, QSizePolicy, QMessageBox, QLineEdit, QDialog, QApplication, QColorDialog, QComboBox, QStyle
-from PyQt6.QtGui import QPixmap, QIcon, QColor, QPainter, QBrush, QImage
-from PyQt6.QtCore import Qt, QPoint, QTimer, QPointF, QEvent, QSize, QSettings, QLocale, QElapsedTimer, QRectF, QByteArray
+from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QFileDialog, QMessageBox, QSizePolicy, QSlider, QCheckBox, QGridLayout, QLineEdit, QColorDialog, QDialog, QStyle
+from PyQt6.QtGui import QPixmap, QColor, QImage, QDragEnterEvent, QDropEvent, QAction, QIcon, QShortcut, QKeySequence, QCursor, QFont, QFontDatabase, QFontMetrics, QDrag, QPainter, QBrush, QPen
+from PyQt6.QtCore import Qt, QTimer, QEvent, QElapsedTimer, QPoint, QPointF, QMimeData, QSize, QByteArray, QSettings, QT_VERSION_STR, QLocale, QFile, QIODevice, QTextStream, QCoreApplication, QRectF
+
 try:
+    import settings_dialog
     from settings_dialog import SettingsDialog
     settings_dialog_available = True
 except ImportError:
-    print('Warning: settings_dialog.py not found. Settings button will be disabled.')
+    print("Warning: 'settings_dialog.py' not found. Settings functionality will be disabled.")
     SettingsDialog = None
     settings_dialog_available = False
 
 def load_module(mod_name):
     try:
         module = importlib.import_module(mod_name)
+        print(f'Successfully imported module: {mod_name}')
         return module
     except ImportError as e:
-        print(f'Error: Could not import module {mod_name}. File might be missing or contain errors: {e}')
+        print(f'ERROR importing {mod_name}: {e}')
         return None
     except Exception as e:
-        print(f'Unexpected error importing module {mod_name}: {e}')
+        print(f'UNEXPECTED ERROR importing {mod_name}: {e}')
         traceback.print_exc()
         return None
+
 translations_mod = load_module('translations')
 flag_icons_mod = load_module('icons')
 image_processing_mod = load_module('image_processing')
@@ -42,11 +50,14 @@ if not all([translations_mod, flag_icons_mod, image_processing_mod, clickable_la
         print(f'GUI Error message failed: {e}')
         pass
     sys.exit(1)
+
 tr = getattr(translations_mod, 'tr', lambda text, lang='en', *args, **kwargs: text)
 FLAG_ICONS = getattr(flag_icons_mod, 'FLAG_ICONS', {})
 resize_images_processor = getattr(image_processing_mod, 'resize_images_processor', lambda app: print('Error: resize_images_processor not loaded'))
+update_comparison_processor = getattr(image_processing_mod, 'update_comparison_processor', lambda app: print('Error: update_comparison_processor not loaded'))
 display_result_processor = getattr(image_processing_mod, 'display_result_processor', lambda app: print('Error: display_result_processor not loaded'))
 save_result_processor = getattr(image_processing_mod, 'save_result_processor', lambda app: print('Error: save_result_processor not loaded'))
+save_animation_processor = getattr(image_processing_mod, 'save_animation_processor', lambda app: print('Error: save_animation_processor not loaded'))
 get_scaled_pixmap_dimensions = getattr(image_processing_mod, 'get_scaled_pixmap_dimensions', lambda app: (0, 0))
 get_original_coords = getattr(image_processing_mod, 'get_original_coords', lambda app, *args: (None,) * 7)
 ClickableLabel = getattr(clickable_label_mod, 'ClickableLabel', QLabel)
@@ -519,8 +530,21 @@ class ImageComparisonApp(QWidget):
         return QIcon(pixmap)
 
     def _create_save_button(self):
+        save_layout = QHBoxLayout()
+        save_layout.setSpacing(5)
+        
         self.btn_save = QPushButton()
-        return self.btn_save
+        save_layout.addWidget(self.btn_save)
+        
+        # Add animation export button
+        self.btn_save_animation = QPushButton()
+        save_layout.addWidget(self.btn_save_animation)
+        
+        # Create a widget to hold the layout
+        save_widget = QWidget()
+        save_widget.setLayout(save_layout)
+        
+        return save_widget
 
     def _apply_initial_settings_to_ui(self):
         if hasattr(self, 'slider_size'):
@@ -570,6 +594,8 @@ class ImageComparisonApp(QWidget):
             self.btn_clear_list2.clicked.connect(lambda: self.clear_image_list(2))
         if hasattr(self, 'btn_save'):
             self.btn_save.clicked.connect(self._save_result_with_error_handling)
+        if hasattr(self, 'btn_save_animation'):
+            self.btn_save_animation.clicked.connect(self._save_animation_with_error_handling)
         if hasattr(self, 'help_button'):
             self.help_button.clicked.connect(self._show_help_dialog)
         if hasattr(self, 'btn_settings'):
@@ -1715,6 +1741,7 @@ class ImageComparisonApp(QWidget):
     def update_translations(self):
         lang = self.current_language
         self.setWindowTitle(tr('Improve ImgSLI', lang))
+        
         if hasattr(self, 'btn_image1'):
             self.btn_image1.setText(tr('Add Image(s) 1', lang))
         if hasattr(self, 'btn_image2'):
@@ -1727,6 +1754,11 @@ class ImageComparisonApp(QWidget):
             self.btn_clear_list2.setToolTip(tr('Clear Right Image List', lang))
         if hasattr(self, 'btn_save'):
             self.btn_save.setText(tr('Save Result', lang))
+        if hasattr(self, 'btn_save_animation'):
+            self.btn_save_animation.setText(tr('Save Animation', lang))
+            self.btn_save_animation.setToolTip(tr('Save as GIF/MP4 with scanning effect', lang))
+        
+        # Rest of existing translations
         if hasattr(self, 'help_button'):
             self.help_button.setToolTip(tr('Show Help', lang))
         if hasattr(self, 'btn_settings'):
@@ -1980,6 +2012,42 @@ class ImageComparisonApp(QWidget):
             except Exception as e:
                 QMessageBox.warning(self, self.tr('Error', self.current_language), f'Error processing settings dialog results: {e}')
                 traceback.print_exc()
+
+    def _save_animation_with_error_handling(self):
+        """
+        Handle errors during the animation save process.
+        """
+        try:
+            if not self.original_image1 or not self.original_image2:
+                QMessageBox.warning(self, tr('Warning', self.current_language), 
+                                  tr('Please load and select images in both slots first.', self.current_language))
+                return
+            if not self.image1 or not self.image2:
+                print('Resized images missing before animation save, attempting resize...')
+                resize_images_processor(self)
+                if not self.image1 or not self.image2:
+                    QMessageBox.warning(self, tr('Warning', self.current_language), 
+                                      tr('Resized images not available. Cannot create animation. Please reload or select images.', self.current_language))
+                    return
+                    
+            # Check if the animation processor function is available
+            if 'save_animation_processor' not in globals() and not hasattr(image_processing_mod, 'save_animation_processor'):
+                QMessageBox.warning(self, tr('Warning', self.current_language),
+                                  tr('Animation export function not available. Please check if the required modules are installed.', self.current_language))
+                return
+                
+            # Call the animation processor
+            if hasattr(image_processing_mod, 'save_animation_processor'):
+                save_animation_processor(self)
+            else:
+                QMessageBox.warning(self, tr('Warning', self.current_language),
+                                  tr('Animation export function not found. Please check your installation.', self.current_language))
+                
+        except Exception as e:
+            print(f'ERROR during save_animation_processor call: {e}')
+            traceback.print_exc()
+            QMessageBox.critical(self, tr('Error', self.current_language), 
+                               f"{tr('Failed to create animation:', self.current_language)}\n{str(e)}")
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = ImageComparisonApp()
