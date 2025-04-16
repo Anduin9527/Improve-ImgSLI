@@ -44,6 +44,7 @@ Improved ImgSLI is an open-source, non-proprietary software designed for intuiti
 *   Automatic resizing of images to match the largest dimensions for consistent comparison.
 *   Save the current comparison view (including split line, magnifier, capture marker, and optional file names) as a full-resolution image.
 *   Export animated GIF or MP4 videos showing a scanning line transition from left image to right image.
+*   Create sequential animations with multiple images, showing smooth scanning line transitions between consecutive images in the sequence.
 
 **Magnifier Tool:**
 *   Powerful Magnifier for close inspection.
@@ -112,6 +113,7 @@ flatpak run io.github.Loganavter.Improve-ImgSLI
 4.  **Magnify:** Activate the Magnifier tool via its checkbox. In this mode, clicking or dragging on the image sets the central capture point. Use WASD keys to move the magnified view areas independently. Use Q/E keys to adjust the distance between the magnifier circles. You can also freeze the capture point using the corresponding checkbox (WASD will then move the frozen point).
 5.  **Save:** Click the "Save Result" button in the UI to export the current comparison view as a single image file.
 6.  **Create Animation:** Click the "Save Animation" button to export a GIF or MP4 animation that shows a scanning line moving from left to right, visually transitioning between the two images.
+7.  **Create Sequential Animation:** Click the "Save Sequential" button to select multiple images and create a continuous animation that transitions through all selected images in sequence with smooth scanning lines.
 
 https://github.com/user-attachments/assets/f2c843c2-31eb-4fb9-8eef-2d28630f2baf
 

@@ -1025,44 +1025,60 @@ def save_animation_processor(self):
                 
             # Draw the blended line centered around the split position
             line_center_pos = split_pos
-            # Ensure thickness doesn't exceed image width/sensible limits
-            line_thickness = max(1, min(min(5, width // 2), int(round(width * 0.005)))) 
-            half_thick_floor = line_thickness // 2
-            half_thick_ceil = (line_thickness + 1) // 2 # Accounts for odd thickness
-
-            # Calculate the range of column indices for the line, clamped to image bounds
-            line_start_col = max(0, line_center_pos - half_thick_floor)
-            line_end_col = min(width, line_center_pos + half_thick_ceil) # Exclusive index for range
-
-            if line_start_col < line_end_col:
-                for i in range(line_start_col, line_end_col):
-                    # Base color is the pixel from the combined frame BEFORE drawing the line
+            # Thinner, more precise line for smoother appearance
+            line_thickness = max(1, min(min(7, width // 2), int(round(width * 0.007))))
+            # Use more subtle gradient for smoother transition
+            gradient_width = int(line_thickness * 2.5)
+            half_gradient = gradient_width // 2
+            
+            # Enhanced blending around the line for a smoother transition
+            for i in range(max(0, line_center_pos - half_gradient), min(width, line_center_pos + half_gradient + 1)):
+                dist_from_center = abs(i - line_center_pos)
+                # Smooth falloff for gradual blending
+                blend_factor = 1.0 - (dist_from_center / half_gradient if half_gradient > 0 else 0)
+                blend_factor = max(0.0, min(1.0, blend_factor))
+                
+                # Apply a smoother cubic easing function for better gradient
+                blend_factor = blend_factor * blend_factor * (3 - 2 * blend_factor)
+                
+                # Blend pixels at this column
+                if 0 <= i < width:
+                    img1_col = img1_array[:, i, :].astype(np.float32)
+                    img2_col = img2_array[:, i, :].astype(np.float32)
+                    
+                    # Enhanced color blending for smoother transition
+                    blended_col = img1_col * blend_factor + img2_col * (1.0 - blend_factor)
+                    
+                    # Apply the blended column to the frame
+                    frame[:, i, :] = np.clip(blended_col, 0, 255).astype(np.uint8)
+            
+            # Draw a subtle highlight along the center of the line for visual emphasis
+            core_width = max(1, line_thickness // 3)
+            for i in range(max(0, line_center_pos - core_width), min(width, line_center_pos + core_width + 1)):
+                if 0 <= i < width:
+                    # Base color is the pixel from the frame BEFORE adding highlight
                     base_pixel_rgb = frame[:, i, :].astype(np.float32)
                     
-                    # Calculate alpha (transparency) based on distance from the line's center
-                    # Alpha is max (0.7) at the center, falls off linearly to 0 at edges
+                    # Calculate distance from center for alpha falloff
                     dist_from_center = abs(i - line_center_pos)
-                    # Avoid division by zero if thickness is 0 or 1
-                    max_dist = (line_thickness / 2.0) if line_thickness >= 1 else 0.1 
-                    alpha = 0.7 * max(0.0, 1.0 - dist_from_center / max_dist)
-                    alpha = min(alpha, 1.0) # Ensure alpha <= 1.0
-
-                    # Determine line color (white or black) based on the base pixel brightness
+                    # Smoother alpha gradient for the highlight
+                    max_dist = core_width if core_width > 0 else 0.1
+                    alpha = 0.5 * max(0.0, 1.0 - dist_from_center / max_dist)
+                    alpha = alpha * alpha  # Square for smoother falloff
+                    
+                    # Determine best highlight color based on pixel brightness
                     brightness = np.mean(base_pixel_rgb, axis=1)
-                    # Create masks for applying white/black line color
-                    # Note: Using np.newaxis to make brightness (height,) compatible with (height, 3)
-                    is_dark_mask = brightness < 128 
+                    is_dark_mask = brightness < 128
                     
-                    # Blend: (1-alpha)*base + alpha*line_color
-                    # White line (255) for dark areas, Black line (0) for light areas
-                    white_line_blend = base_pixel_rgb * (1.0 - alpha) + 255.0 * alpha
-                    black_line_blend = base_pixel_rgb * (1.0 - alpha) + 0.0 * alpha
+                    # Apply highlight with smoother blending
+                    white_highlight = base_pixel_rgb * (1.0 - alpha) + 255.0 * alpha
+                    black_highlight = base_pixel_rgb * (1.0 - alpha) + 0.0 * alpha
                     
-                    # Apply the correct blend based on the mask
-                    blended_pixel = np.where(is_dark_mask[:, np.newaxis], white_line_blend, black_line_blend)
-
-                    # Clip results and convert back to uint8
-                    frame[:, i, :] = np.clip(blended_pixel, 0, 255).astype(np.uint8)
+                    # Apply the correct highlight based on brightness
+                    highlighted_pixel = np.where(is_dark_mask[:, np.newaxis], white_highlight, black_highlight)
+                    
+                    # Update frame with highlighted pixel
+                    frame[:, i, :] = np.clip(highlighted_pixel, 0, 255).astype(np.uint8)
             
             return frame
         
@@ -1091,16 +1107,18 @@ def save_animation_processor(self):
             else:
                 file_name += '.mp4'  # Default to mp4
                 
-        # Set fps based on file type (lower for GIF to reduce size)
-        fps = 15 if file_name.lower().endswith('.gif') else 30
+        # Set fps based on file type (increased for better smoothness)
+        fps = 24 if file_name.lower().endswith('.gif') else 60
                 
         # Save the animation
         try:
             if file_name.lower().endswith('.gif'):
-                clip.write_gif(file_name, fps=fps)
+                # Use higher quality settings for GIF
+                clip.write_gif(file_name, fps=fps, opt='nq', colors=256)
                 print(f'Animation successfully saved as GIF: {file_name}')
             else:
-                clip.write_videofile(file_name, fps=fps, codec='libx264', audio=False)
+                # Use higher bitrate for MP4 to maintain quality
+                clip.write_videofile(file_name, fps=fps, codec='libx264', audio=False, bitrate='8000k')
                 print(f'Animation successfully saved as video: {file_name}')
                 
             QMessageBox.information(
@@ -1122,4 +1140,237 @@ def save_animation_processor(self):
         QMessageBox.critical(
             self, tr('Error', self.current_language),
             f"{tr('An unexpected error occurred during the animation process:', self.current_language)}\n{error_path_msg}\n\n{str(e_outer)}"
+        )
+
+def save_sequential_animation_processor(self):
+    """
+    Create and save an animation showing a scanning line moving from left to right
+    to show transitions between multiple images in sequence.
+    """
+    if not video_export_available:
+        QMessageBox.warning(self, tr('Warning', self.current_language),
+                          tr('Video export is not available. Please install the required dependencies.', self.current_language))
+        return
+    
+    # Ask user to select multiple images
+    file_filter = tr('Image Files', self.current_language) + ' (*.png *.jpg *.jpeg *.bmp *.webp *.tif *.tiff);;' + \
+                  tr('All Files', self.current_language) + ' (*)'
+    
+    image_paths, _ = QFileDialog.getOpenFileNames(
+        self, tr('Select Multiple Images For Sequential Animation', self.current_language), '', file_filter)
+    
+    if not image_paths or len(image_paths) < 2:
+        if image_paths:  # User selected only one image
+            QMessageBox.warning(self, tr('Warning', self.current_language), 
+                              tr('Please select at least two images for the sequential animation.', self.current_language))
+        return
+    
+    try:
+        # Load all selected images
+        pil_images = []
+        for path in image_paths:
+            try:
+                img = Image.open(path)
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                pil_images.append(img)
+            except Exception as e:
+                print(f'Error loading image {path}: {e}')
+                QMessageBox.warning(self, tr('Warning', self.current_language),
+                                  tr('Failed to load image:', self.current_language) + f'\n{path}\n\n{str(e)}')
+                return
+        
+        if not pil_images:
+            QMessageBox.warning(self, tr('Warning', self.current_language),
+                              tr('No images could be loaded. Please check the file formats.', self.current_language))
+            return
+        
+        # Resize all images to the same dimensions (use the first image's size as reference)
+        base_width, base_height = pil_images[0].size
+        for i in range(1, len(pil_images)):
+            if pil_images[i].size != (base_width, base_height):
+                pil_images[i] = pil_images[i].resize((base_width, base_height), Image.Resampling.LANCZOS)
+        
+        # Convert PIL images to numpy arrays for moviepy
+        image_arrays = [np.array(img) for img in pil_images]
+        
+        # Get dimensions from the first image
+        height, width = image_arrays[0].shape[:2]
+        
+        # Calculate the total duration
+        # For each pair of images, we need time for the transition
+        num_images = len(image_arrays)
+        transition_time = 1.5  # seconds per transition
+        
+        # Add time for 5 static frames at the end
+        frames_per_second = 30  # Base calculation on standard rate
+        static_end_time = 5.0 / frames_per_second  # Time for 5 frames
+        
+        # Total duration includes all transitions plus the static end frames
+        total_duration = transition_time * (num_images - 1) + static_end_time
+        
+        # Calculate the transition portion of the animation (excluding static end frames)
+        transition_portion = 1.0 - (static_end_time / total_duration)
+        
+        # Function to create each frame with a scanning line at time t
+        def make_frame(t):
+            normalized_time = t / total_duration
+            
+            # If we've reached the static end portion, show the last image
+            if normalized_time >= transition_portion:
+                return image_arrays[-1].copy()
+                
+            # Otherwise continue with normal transition logic
+            # Scale the time to fit within the transition portion
+            scaled_transition_time = normalized_time / transition_portion * (transition_time * (num_images - 1))
+            
+            # Determine which image pair we're transitioning between
+            transition_index = int(scaled_transition_time / transition_time)
+            if transition_index >= num_images - 1:
+                # Show the last image if we're past all transitions
+                transition_index = num_images - 2
+            
+            # Calculate progress within the current transition (0.0 to 1.0)
+            local_progress = (scaled_transition_time - transition_index * transition_time) / transition_time
+            local_progress = max(0.0, min(1.0, local_progress))
+            
+            # Get current image pair
+            img1_array = image_arrays[transition_index]
+            img2_array = image_arrays[transition_index + 1]
+            
+            # Handle exact start and end cases of each transition
+            if local_progress <= 0.0:
+                return img1_array.copy()
+                
+            if local_progress >= 1.0:
+                return img2_array.copy()
+            
+            # Intermediate frame: Mix of image1 and image2 with a line
+            # Split position moves from left to right, gradually replacing image1 with image2
+            split_pos = int(round(width * local_progress))
+            split_pos = max(0, min(width, split_pos))
+            
+            # Create frame by combining parts of image1 and image2
+            frame = np.zeros_like(img1_array)
+            if split_pos > 0:  # Copy left part from image2
+                frame[:, :split_pos, :] = img2_array[:, :split_pos, :]
+            if split_pos < width:  # Copy right part from image1
+                frame[:, split_pos:, :] = img1_array[:, split_pos:, :]
+            
+            # Draw the blended line centered around the split position
+            line_center_pos = split_pos
+            # Thinner, more precise line for smoother appearance
+            line_thickness = max(1, min(min(7, width // 2), int(round(width * 0.007))))
+            # Use more subtle gradient for smoother transition
+            gradient_width = int(line_thickness * 2.5)
+            half_gradient = gradient_width // 2
+            
+            # Enhanced blending around the line for a smoother transition
+            for i in range(max(0, line_center_pos - half_gradient), min(width, line_center_pos + half_gradient + 1)):
+                dist_from_center = abs(i - line_center_pos)
+                # Smooth falloff for gradual blending
+                blend_factor = 1.0 - (dist_from_center / half_gradient if half_gradient > 0 else 0)
+                blend_factor = max(0.0, min(1.0, blend_factor))
+                
+                # Apply a smoother cubic easing function for better gradient
+                blend_factor = blend_factor * blend_factor * (3 - 2 * blend_factor)
+                
+                # Blend pixels at this column
+                if 0 <= i < width:
+                    img1_col = img1_array[:, i, :].astype(np.float32)
+                    img2_col = img2_array[:, i, :].astype(np.float32)
+                    
+                    # Enhanced color blending for smoother transition
+                    blended_col = img1_col * blend_factor + img2_col * (1.0 - blend_factor)
+                    
+                    # Apply the blended column to the frame
+                    frame[:, i, :] = np.clip(blended_col, 0, 255).astype(np.uint8)
+            
+            # Draw a subtle highlight along the center of the line for visual emphasis
+            core_width = max(1, line_thickness // 3)
+            for i in range(max(0, line_center_pos - core_width), min(width, line_center_pos + core_width + 1)):
+                if 0 <= i < width:
+                    # Base color is the pixel from the frame BEFORE adding highlight
+                    base_pixel_rgb = frame[:, i, :].astype(np.float32)
+                    
+                    # Calculate distance from center for alpha falloff
+                    dist_from_center = abs(i - line_center_pos)
+                    # Smoother alpha gradient for the highlight
+                    max_dist = core_width if core_width > 0 else 0.1
+                    alpha = 0.5 * max(0.0, 1.0 - dist_from_center / max_dist)
+                    alpha = alpha * alpha  # Square for smoother falloff
+                    
+                    # Determine best highlight color based on pixel brightness
+                    brightness = np.mean(base_pixel_rgb, axis=1)
+                    is_dark_mask = brightness < 128
+                    
+                    # Apply highlight with smoother blending
+                    white_highlight = base_pixel_rgb * (1.0 - alpha) + 255.0 * alpha
+                    black_highlight = base_pixel_rgb * (1.0 - alpha) + 0.0 * alpha
+                    
+                    # Apply the correct highlight based on brightness
+                    highlighted_pixel = np.where(is_dark_mask[:, np.newaxis], white_highlight, black_highlight)
+                    
+                    # Update frame with highlighted pixel
+                    frame[:, i, :] = np.clip(highlighted_pixel, 0, 255).astype(np.uint8)
+            
+            return frame
+        
+        # Create a video clip
+        clip = VideoClip(make_frame, duration=total_duration)
+        
+        # Ask user for save location and format
+        save_filter = tr('GIF Animation', self.current_language) + ' (*.gif);;' + \
+                    tr('MP4 Video', self.current_language) + ' (*.mp4);;' + \
+                    tr('All Files', self.current_language) + ' (*)'
+                    
+        file_name, selected_filter = QFileDialog.getSaveFileName(
+            self, tr('Save Sequential Animation', self.current_language), '', save_filter)
+            
+        if not file_name:
+            return
+            
+        # Add appropriate extension if not provided
+        _, ext = os.path.splitext(file_name)
+        if not ext:
+            if 'GIF' in selected_filter:
+                file_name += '.gif'
+            elif 'MP4' in selected_filter:
+                file_name += '.mp4'
+            else:
+                file_name += '.mp4'  # Default to mp4
+                
+        # Set fps based on file type (increased for better smoothness)
+        fps = 24 if file_name.lower().endswith('.gif') else 60
+                
+        # Save the animation
+        try:
+            if file_name.lower().endswith('.gif'):
+                # Use higher quality settings for GIF
+                clip.write_gif(file_name, fps=fps, opt='nq', colors=256)
+                print(f'Sequential animation successfully saved as GIF: {file_name}')
+            else:
+                # Use higher bitrate for MP4 to maintain quality
+                clip.write_videofile(file_name, fps=fps, codec='libx264', audio=False, bitrate='8000k')
+                print(f'Sequential animation successfully saved as video: {file_name}')
+                
+            QMessageBox.information(
+                self, tr('Success', self.current_language),
+                tr('Sequential animation successfully saved:', self.current_language) + f'\n{file_name}'
+            )
+        except Exception as e_save:
+            QMessageBox.critical(
+                self, tr('Error', self.current_language), 
+                f"{tr('Failed to save sequential animation:', self.current_language)}\n{file_name}\n\n{str(e_save)}"
+            )
+            print(f'ERROR during sequential animation save operation: {e_save}')
+            traceback.print_exc()
+            
+    except Exception as e_outer:
+        print(f'ERROR in save_sequential_animation_processor (outer): {e_outer}')
+        traceback.print_exc()
+        error_path_msg = file_name if 'file_name' in locals() else tr('Path not determined', self.current_language)
+        QMessageBox.critical(
+            self, tr('Error', self.current_language),
+            f"{tr('An unexpected error occurred during the sequential animation process:', self.current_language)}\n{error_path_msg}\n\n{str(e_outer)}"
         )

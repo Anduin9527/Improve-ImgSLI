@@ -590,6 +590,10 @@ class ImageComparisonApp(QWidget):
         self.btn_save_animation = PushButton()
         save_layout.addWidget(self.btn_save_animation)
         
+        # Add sequential animation export button
+        self.btn_save_sequential = PushButton()
+        save_layout.addWidget(self.btn_save_sequential)
+        
         # Create a widget to hold the layout
         save_widget = QWidget()
         save_widget.setLayout(save_layout)
@@ -646,6 +650,8 @@ class ImageComparisonApp(QWidget):
             self.btn_save.clicked.connect(self._save_result_with_error_handling)
         if hasattr(self, 'btn_save_animation'):
             self.btn_save_animation.clicked.connect(self._save_animation_with_error_handling)
+        if hasattr(self, 'btn_save_sequential'):
+            self.btn_save_sequential.clicked.connect(self._save_sequential_animation_with_error_handling)
         if hasattr(self, 'help_button'):
             self.help_button.clicked.connect(self._show_help_dialog)
         if hasattr(self, 'btn_settings'):
@@ -1771,20 +1777,25 @@ class ImageComparisonApp(QWidget):
         self.setWindowTitle(tr('Improve ImgSLI', lang))
         
         if hasattr(self, 'btn_image1'):
-            self.btn_image1.setText(tr('Add Image(s) 1', lang))
+            self.btn_image1.setText(tr('Add Img(s)', lang))
         if hasattr(self, 'btn_image2'):
-            self.btn_image2.setText(tr('Add Image(s) 2', lang))
+            self.btn_image2.setText(tr('Add Img(s)', lang))
         if hasattr(self, 'btn_swap'):
-            self.btn_swap.setToolTip(tr('Swap Image Lists', lang))
+            self.btn_swap.setText(tr('Swap', lang))
+            self.btn_swap.setToolTip(tr('Swap image lists between left and right panels', lang))
         if hasattr(self, 'btn_clear_list1'):
-            self.btn_clear_list1.setToolTip(tr('Clear Left Image List', lang))
+            self.btn_clear_list1.setToolTip(tr('Clear image list 1', lang))
         if hasattr(self, 'btn_clear_list2'):
-            self.btn_clear_list2.setToolTip(tr('Clear Right Image List', lang))
+            self.btn_clear_list2.setToolTip(tr('Clear image list 2', lang))
         if hasattr(self, 'btn_save'):
             self.btn_save.setText(tr('Save Result', lang))
+            self.btn_save.setToolTip(tr('Save current comparison view as a static image', lang))
         if hasattr(self, 'btn_save_animation'):
             self.btn_save_animation.setText(tr('Save Animation', lang))
-            self.btn_save_animation.setToolTip(tr('Save as GIF/MP4 with scanning effect', lang))
+            self.btn_save_animation.setToolTip(tr('Create a scanning line animation between the two images', lang))
+        if hasattr(self, 'btn_save_sequential'):
+            self.btn_save_sequential.setText(tr('Save Sequential', lang))
+            self.btn_save_sequential.setToolTip(tr('Create a scanning line animation transitioning through multiple images', lang))
         
         # Rest of existing translations
         if hasattr(self, 'help_button'):
@@ -2102,6 +2113,32 @@ class ImageComparisonApp(QWidget):
             MessageBox(
                 tr('Error', self.current_language), 
                 f"{tr('Failed to create animation:', self.current_language)}\n{str(e)}",
+                self
+            ).exec()
+
+    def _save_sequential_animation_with_error_handling(self):
+        """
+        Handle errors during the sequential animation save process.
+        """
+        try:
+            # Check if the sequential animation processor function is available
+            if not hasattr(image_processing_mod, 'save_sequential_animation_processor'):
+                MessageBox(
+                    tr('Warning', self.current_language),
+                    tr('Sequential animation export function not available. Please check if the required modules are installed.', self.current_language),
+                    self
+                ).exec()
+                return
+                
+            # Call the sequential animation processor
+            image_processing_mod.save_sequential_animation_processor(self)
+                
+        except Exception as e:
+            print(f'ERROR during save_sequential_animation_processor call: {e}')
+            traceback.print_exc()
+            MessageBox(
+                tr('Error', self.current_language), 
+                f"{tr('Failed to create sequential animation:', self.current_language)}\n{str(e)}",
                 self
             ).exec()
 if __name__ == '__main__':
