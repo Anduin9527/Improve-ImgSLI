@@ -356,115 +356,159 @@ class ImageComparisonApp(QWidget):
         resolution_label_style = 'color: grey; font-size: 9pt;'
         self.resolution_label1.setStyleSheet(resolution_label_style)
         self.resolution_label2.setStyleSheet(resolution_label_style)
+        
+        # Main layout with proper margins
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(5, 5, 5, 5)
-        main_layout.setSpacing(5)
+        main_layout.setContentsMargins(8, 8, 8, 8)
+        main_layout.setSpacing(6)
+        
+        # Selection layout
         selection_layout = QVBoxLayout()
-        selection_layout.setSpacing(2)
+        selection_layout.setSpacing(3)
         selection_layout.addLayout(self._create_button_layout())
         selection_layout.addLayout(self._create_combobox_layout())
         main_layout.addLayout(selection_layout)
+        
         main_layout.addLayout(self._create_checkbox_layout())
         main_layout.addLayout(self._create_slider_layout())
         main_layout.addWidget(self.image_label)
+        
+        # Resolution labels with proper alignment
         resolution_layout = QHBoxLayout()
         resolution_layout.addWidget(self.resolution_label1, alignment=Qt.AlignmentFlag.AlignLeft)
         resolution_layout.addStretch()
         resolution_layout.addWidget(self.resolution_label2, alignment=Qt.AlignmentFlag.AlignRight)
         resolution_layout.setContentsMargins(5, 0, 5, 2)
         main_layout.addLayout(resolution_layout)
+        
+        # Warning label
         main_layout.addWidget(self.length_warning_label)
+        
+        # File names and edit layouts
         main_layout.addLayout(self._create_file_names_layout())
         main_layout.addLayout(self._create_edit_layout())
+        
+        # Save button
         main_layout.addWidget(self._create_save_button())
+        
         self.setLayout(main_layout)
         self.update_translations()
 
     def _create_button_layout(self):
         layout = QHBoxLayout()
+        layout.setSpacing(8)  # Consistent spacing
+        
+        # Add image buttons
         self.btn_image1 = PushButton()
         self.btn_image2 = PushButton()
+        
+        # Icon buttons
         self.btn_swap = TransparentPushButton()
         self.btn_clear_list1 = TransparentPushButton()
         self.btn_clear_list2 = TransparentPushButton()
+        
+        # Set up swap icon with new SVG
         swap_icon = self._get_icon('swap', fallback_text='⇄')
         self.btn_swap.setIcon(swap_icon)
-        self.btn_swap.setIconSize(QSize(20, 20))
-        self.btn_swap.setFixedSize(24, 24)
+        self.btn_swap.setIconSize(QSize(24, 24))
+        self.btn_swap.setFixedSize(36, 36)
+        self.btn_swap.setStyleSheet("qproperty-iconSize: 24px; padding: 6px;")
+        
+        # Set up clear icons with new SVG
         clear_icon = self._get_icon('trash', use_standard_fallback=QStyle.StandardPixmap.SP_TrashIcon)
-        icon_size = QSize(18, 18)
-        clear_button_size = QSize(24, 24)
+        icon_size = QSize(22, 22)
+        clear_button_size = QSize(36, 36)
+        
         self.btn_clear_list1.setIcon(clear_icon)
         self.btn_clear_list1.setIconSize(icon_size)
         self.btn_clear_list1.setFixedSize(clear_button_size)
+        self.btn_clear_list1.setStyleSheet("qproperty-iconSize: 22px; padding: 7px;")
+        
         self.btn_clear_list2.setIcon(clear_icon)
         self.btn_clear_list2.setIconSize(icon_size)
         self.btn_clear_list2.setFixedSize(clear_button_size)
+        self.btn_clear_list2.setStyleSheet("qproperty-iconSize: 22px; padding: 7px;")
+        
+        # Make Add buttons wider for better text display
+        self.btn_image1.setMinimumWidth(120)
+        self.btn_image2.setMinimumWidth(120)
+        
         layout.addWidget(self.btn_image1)
         layout.addWidget(self.btn_clear_list1)
         layout.addWidget(self.btn_swap)
         layout.addWidget(self.btn_image2)
         layout.addWidget(self.btn_clear_list2)
+        
         return layout
 
     def _create_combobox_layout(self):
         layout = QHBoxLayout()
+        layout.setSpacing(8)
+        
         self.combo_image1 = ComboBox()
         self.combo_image2 = ComboBox()
+        
+        # Set consistent size
+        self.combo_image1.setMinimumHeight(28)
+        self.combo_image2.setMinimumHeight(28)
+        
         layout.addWidget(self.combo_image1)
         layout.addWidget(self.combo_image2)
+        
         return layout
 
     def _create_checkbox_layout(self):
         layout = QHBoxLayout()
-        layout.setSpacing(10)  # 设置控件之间的间距
+        layout.setSpacing(10)  # Consistent spacing
         
-        # 创建一个水平布局，专门用于复选框
+        # Left side with checkboxes
         checkbox_layout = QHBoxLayout()
-        checkbox_layout.setSpacing(15)  # 设置复选框之间的间距
+        checkbox_layout.setSpacing(15)  # Spacing between checkboxes
         
         self.checkbox_horizontal = CheckBox()
         self.checkbox_magnifier = CheckBox()
         self.freeze_button = CheckBox()
         self.checkbox_file_names = CheckBox()
         
-        # 设置复选框的最小宽度，确保文本显示完整
-        self.checkbox_horizontal.setMinimumWidth(120)
-        self.checkbox_magnifier.setMinimumWidth(120)
-        self.freeze_button.setMinimumWidth(120)
-        self.checkbox_file_names.setMinimumWidth(140)
+        # Ensure checkboxes have sufficient width to display text properly
+        self.checkbox_horizontal.setMinimumWidth(130)
+        self.checkbox_magnifier.setMinimumWidth(130)
+        self.freeze_button.setMinimumWidth(130)
+        self.checkbox_file_names.setMinimumWidth(250)
         
-        # 添加复选框到复选框布局
+        # Add checkboxes with proper spacing
         checkbox_layout.addWidget(self.checkbox_horizontal)
         checkbox_layout.addWidget(self.checkbox_magnifier)
         checkbox_layout.addWidget(self.freeze_button)
         checkbox_layout.addWidget(self.checkbox_file_names)
-        checkbox_layout.addStretch(1)  # 添加弹性空间
+        checkbox_layout.addStretch(1)
         
-        # 将复选框布局添加到主布局
-        layout.addLayout(checkbox_layout, 1)  # 给复选框布局分配更多空间
+        # Add checkbox layout to main layout with proper weight
+        layout.addLayout(checkbox_layout, 1)
         
-        # 创建一个水平布局用于按钮
+        # Right side with icon buttons
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(5)
+        button_layout.setSpacing(8)  # Consistent spacing for buttons
         
+        # Setup help button with new SVG
         self.help_button = TransparentPushButton()
         help_icon = self._get_icon('help', fallback_text='?')
         self.help_button.setIcon(help_icon)
-        self.help_button.setIconSize(QSize(20, 20))
-        self.help_button.setFixedSize(24, 24)
+        self.help_button.setIconSize(QSize(24, 24))
+        self.help_button.setFixedSize(36, 36)
+        self.help_button.setStyleSheet("qproperty-iconSize: 24px; padding: 6px;")
         
+        # Setup settings button with new SVG
         self.btn_settings = TransparentPushButton()
         settings_icon = self._get_icon('settings', fallback_text='...')
         self.btn_settings.setIcon(settings_icon)
-        self.btn_settings.setIconSize(QSize(20, 20))
-        self.btn_settings.setFixedSize(24, 24)
+        self.btn_settings.setIconSize(QSize(24, 24))
+        self.btn_settings.setFixedSize(36, 36)
+        self.btn_settings.setStyleSheet("qproperty-iconSize: 24px; padding: 6px;")
         
-        # 添加按钮到按钮布局
         button_layout.addWidget(self.btn_settings)
         button_layout.addWidget(self.help_button)
         
-        # 将按钮布局添加到主布局
         layout.addLayout(button_layout)
         
         return layout
@@ -499,21 +543,34 @@ class ImageComparisonApp(QWidget):
 
     def _create_slider_layout(self):
         layout = QHBoxLayout()
+        layout.setSpacing(10)
+        
+        # Create sliders with labels
         self.label_magnifier_size = BodyLabel()
         self.slider_size = Slider(Qt.Orientation.Horizontal)
         self.slider_size.setRange(5, 100)
+        self.slider_size.setMinimumWidth(80)
+        
         self.label_capture_size = BodyLabel()
         self.slider_capture = Slider(Qt.Orientation.Horizontal)
         self.slider_capture.setRange(1, 50)
+        self.slider_capture.setMinimumWidth(80)
+        
         self.label_movement_speed = BodyLabel()
         self.slider_speed = Slider(Qt.Orientation.Horizontal)
         self.slider_speed.setRange(1, 50)
+        self.slider_speed.setMinimumWidth(80)
+        
+        # Add sliders to layout with proper spacing
         layout.addWidget(self.label_magnifier_size)
-        layout.addWidget(self.slider_size)
+        layout.addWidget(self.slider_size, 1)
+        layout.addSpacing(15)
         layout.addWidget(self.label_capture_size)
-        layout.addWidget(self.slider_capture)
+        layout.addWidget(self.slider_capture, 1)
+        layout.addSpacing(15)
         layout.addWidget(self.label_movement_speed)
-        layout.addWidget(self.slider_speed)
+        layout.addWidget(self.slider_speed, 1)
+        
         return layout
 
     def _create_image_label(self):
@@ -526,38 +583,74 @@ class ImageComparisonApp(QWidget):
 
     def _create_file_names_layout(self):
         layout = QHBoxLayout()
+        
+        # Create file name labels with better styling
         self.file_name_label1 = CaptionLabel('--')
         self.file_name_label2 = CaptionLabel('--')
+        
+        # Better text handling for file name labels
         self.file_name_label1.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.file_name_label2.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        
+        # Ensure proper alignment and text display
+        self.file_name_label1.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.file_name_label2.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        
+        # Add minimum height for consistent display
+        self.file_name_label1.setMinimumHeight(22)
+        self.file_name_label2.setMinimumHeight(22)
+        
+        # Add to layout with proper alignment
         layout.addWidget(self.file_name_label1, alignment=Qt.AlignmentFlag.AlignLeft)
         layout.addStretch()
         layout.addWidget(self.file_name_label2, alignment=Qt.AlignmentFlag.AlignRight)
-        layout.setContentsMargins(5, 0, 5, 0)
+        
+        # Set appropriate margins
+        layout.setContentsMargins(5, 2, 5, 2)
+        
         return layout
 
     def _create_edit_layout(self):
         self.edit_layout = QHBoxLayout()
+        self.edit_layout.setSpacing(8)
+        
+        # Create labels and edit fields with better styling
         self.label_edit_name1 = BodyLabel()
         self.edit_name1 = LineEdit()
         self.label_edit_name2 = BodyLabel()
         self.edit_name2 = LineEdit()
         self.label_edit_font_size = BodyLabel()
+        
+        # Ensure proper sizing for input fields
+        self.edit_name1.setMinimumHeight(28)
+        self.edit_name2.setMinimumHeight(28)
+        
+        # Font size slider with better styling
         self.font_size_slider = Slider(Qt.Orientation.Horizontal)
         self.font_size_slider.setRange(10, 1000)
         self.font_size_slider.setValue(200)
+        self.font_size_slider.setMinimumWidth(100)
+        
+        # Color picker button
         self.btn_color_picker = PushButton()
-        icon_size = QSize(20, 20)
+        icon_size = QSize(24, 24)
         self.btn_color_picker.setIcon(self._create_color_wheel_icon(icon_size))
         self.btn_color_picker.setIconSize(icon_size)
-        self.btn_color_picker.setFixedSize(26, 26)
+        self.btn_color_picker.setFixedSize(36, 36)
+        self.btn_color_picker.setStyleSheet("qproperty-iconSize: 24px; padding: 6px;")
+        
+        # Add widgets to layout with proper spacing
         self.edit_layout.addWidget(self.label_edit_name1)
-        self.edit_layout.addWidget(self.edit_name1)
+        self.edit_layout.addWidget(self.edit_name1, 1)
+        self.edit_layout.addSpacing(5)
         self.edit_layout.addWidget(self.label_edit_name2)
-        self.edit_layout.addWidget(self.edit_name2)
+        self.edit_layout.addWidget(self.edit_name2, 1)
+        self.edit_layout.addSpacing(10)
         self.edit_layout.addWidget(self.label_edit_font_size)
-        self.edit_layout.addWidget(self.font_size_slider)
+        self.edit_layout.addWidget(self.font_size_slider, 1)
+        self.edit_layout.addSpacing(5)
         self.edit_layout.addWidget(self.btn_color_picker)
+        
         return self.edit_layout
 
     def _create_color_wheel_icon(self, size: QSize) -> QIcon:
@@ -581,17 +674,23 @@ class ImageComparisonApp(QWidget):
 
     def _create_save_button(self):
         save_layout = QHBoxLayout()
-        save_layout.setSpacing(5)
+        save_layout.setSpacing(8)
         
+        # Create buttons with consistent sizes
         self.btn_save = PushButton()
-        save_layout.addWidget(self.btn_save)
+        self.btn_save.setMinimumHeight(32)
+        self.btn_save.setMinimumWidth(120)
         
-        # Add animation export button
         self.btn_save_animation = PushButton()
-        save_layout.addWidget(self.btn_save_animation)
+        self.btn_save_animation.setMinimumHeight(32)
+        self.btn_save_animation.setMinimumWidth(120)
         
-        # Add sequential animation export button
         self.btn_save_sequential = PushButton()
+        self.btn_save_sequential.setMinimumHeight(32)
+        self.btn_save_sequential.setMinimumWidth(120)
+        
+        save_layout.addWidget(self.btn_save)
+        save_layout.addWidget(self.btn_save_animation)
         save_layout.addWidget(self.btn_save_sequential)
         
         # Create a widget to hold the layout
@@ -1778,10 +1877,13 @@ class ImageComparisonApp(QWidget):
         
         if hasattr(self, 'btn_image1'):
             self.btn_image1.setText(tr('Add Img(s)', lang))
+            self.btn_image1.setToolTip(tr('Add image(s) to the left panel', lang))
         if hasattr(self, 'btn_image2'):
             self.btn_image2.setText(tr('Add Img(s)', lang))
+            self.btn_image2.setToolTip(tr('Add image(s) to the right panel', lang))
         if hasattr(self, 'btn_swap'):
-            self.btn_swap.setText(tr('Swap', lang))
+            # Remove text, use only icon
+            self.btn_swap.setText("")
             self.btn_swap.setToolTip(tr('Swap image lists between left and right panels', lang))
         if hasattr(self, 'btn_clear_list1'):
             self.btn_clear_list1.setToolTip(tr('Clear image list 1', lang))

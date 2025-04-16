@@ -1,5 +1,19 @@
 import base64
+import os
 
+def read_svg_file(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        print(f"Error reading SVG file {file_path}: {e}")
+        return None
+
+# Try to load SVG files from the icons directory
+script_dir = os.path.dirname(os.path.abspath(__file__))
+icons_dir = os.path.join(script_dir, 'icons')
+
+# Define default SVG contents
 settings_svg = '''
 <svg width="24" height="24" viewBox="0 0 24 24" fill="#333333" xmlns="http://www.w3.org/2000/svg">
   <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
@@ -28,6 +42,29 @@ swap_svg = '''
   <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
 </svg>
 '''
+
+# Try to load SVG files from the icons directory if they exist
+if os.path.isdir(icons_dir):
+    setting_path = os.path.join(icons_dir, 'setting.svg')
+    help_path = os.path.join(icons_dir, 'help.svg')
+    clean_path = os.path.join(icons_dir, 'clean.svg')
+    change_path = os.path.join(icons_dir, 'change.svg')
+    
+    setting_content = read_svg_file(setting_path)
+    if setting_content:
+        settings_svg = setting_content
+        
+    help_content = read_svg_file(help_path)
+    if help_content:
+        help_svg = help_content
+        
+    clean_content = read_svg_file(clean_path)
+    trash_content = clean_content if clean_content else trash_svg
+    
+    change_content = read_svg_file(change_path)
+    swap_content = change_content if change_content else swap_svg
+else:
+    print(f"Icons directory not found at: {icons_dir}")
 
 FLAG_ICONS = {
     'en': base64.b64encode('''
@@ -68,6 +105,6 @@ FLAG_ICONS = {
     '''.encode('utf-8')).decode('ascii'),
     'settings': base64.b64encode(settings_svg.encode('utf-8')).decode('ascii'),
     'help': base64.b64encode(help_svg.encode('utf-8')).decode('ascii'),
-    'trash': base64.b64encode(trash_svg.encode('utf-8')).decode('ascii'),
-    'swap': base64.b64encode(swap_svg.encode('utf-8')).decode('ascii'),
+    'trash': base64.b64encode(trash_content.encode('utf-8')).decode('ascii'),
+    'swap': base64.b64encode(swap_content.encode('utf-8')).decode('ascii'),
 }
