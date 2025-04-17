@@ -4,7 +4,7 @@ from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtCore import QSize, Qt
 
 # 导入Fluent控件
-from qfluentwidgets import (RadioButton, SpinBox, PushButton, 
+from qfluentwidgets import (RadioButton, SpinBox, PushButton,
                           BodyLabel, TitleLabel, FluentStyleSheet,
                           MessageBox)
 
@@ -28,35 +28,44 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.tr = tr_func if callable(tr_func) else app_tr
         self.current_language = current_language
-        
+
         # 应用Fluent样式到对话框
         # FluentStyleSheet.applyToWidget(self)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
-        
+
         self.setWindowTitle(self.tr('Settings', self.current_language))
         self.setMinimumWidth(350)
         main_layout = QVBoxLayout(self)
-        
-        # 使用标题标签代替组框
+
+        # 语言设置部分
         lang_title = TitleLabel(self.tr('Language:', self.current_language))
         main_layout.addWidget(lang_title)
-        
-        lang_layout = QHBoxLayout()
-        self.radio_en = RadioButton('English')
-        self.radio_ru = RadioButton('Русский')
-        self.radio_zh = RadioButton('中文')
-        self.radio_pt_br = RadioButton('Português (BR)')
+
+        # 使用网格布局来安排语言选项
+        from PyQt6.QtWidgets import QGridLayout
+        lang_layout = QGridLayout()
+        lang_layout.setSpacing(10)
+
+        # 创建单选按钮
+        self.radio_en = RadioButton()
+        self.radio_ru = RadioButton()
+        self.radio_zh = RadioButton()
+        self.radio_pt_br = RadioButton()
+
+        # 设置单选按钮的属性
         self._setup_language_radio(self.radio_en, 'en', FLAG_ICONS.get('en'))
         self._setup_language_radio(self.radio_ru, 'ru', FLAG_ICONS.get('ru'))
         self._setup_language_radio(self.radio_zh, 'zh', FLAG_ICONS.get('zh'))
         self._setup_language_radio(self.radio_pt_br, 'pt_BR', FLAG_ICONS.get('pt_BR'))
-        lang_layout.addWidget(self.radio_en)
-        lang_layout.addWidget(self.radio_ru)
-        lang_layout.addWidget(self.radio_zh)
-        lang_layout.addWidget(self.radio_pt_br)
-        lang_layout.addStretch()
+
+        # 将单选按钮添加到网格布局中
+        lang_layout.addWidget(self.radio_en, 0, 0)
+        lang_layout.addWidget(self.radio_ru, 0, 1)
+        lang_layout.addWidget(self.radio_zh, 1, 0)
+        lang_layout.addWidget(self.radio_pt_br, 1, 1)
+
         main_layout.addLayout(lang_layout)
-        
+
         if current_language == 'en':
             self.radio_en.setChecked(True)
         elif current_language == 'ru':
@@ -67,7 +76,7 @@ class SettingsDialog(QDialog):
             self.radio_pt_br.setChecked(True)
         else:
             self.radio_en.setChecked(True)
-            
+
         # 最大名称长度设置
         length_layout = QHBoxLayout()
         length_label = BodyLabel(self.tr('Maximum Name Length (UI):', self.current_language))
@@ -81,7 +90,7 @@ class SettingsDialog(QDialog):
         length_layout.addWidget(length_label)
         length_layout.addWidget(self.spin_max_length)
         main_layout.addLayout(length_layout)
-        
+
         # JPEG质量设置
         jpeg_quality_layout = QHBoxLayout()
         jpeg_quality_label = BodyLabel(self.tr('JPEG Quality:', self.current_language))
@@ -93,7 +102,7 @@ class SettingsDialog(QDialog):
         jpeg_quality_layout.addWidget(jpeg_quality_label)
         jpeg_quality_layout.addWidget(self.spin_jpeg_quality)
         main_layout.addLayout(jpeg_quality_layout)
-        
+
         # 按钮布局
         button_layout = QHBoxLayout()
         self.ok_button = PushButton(self.tr('OK', self.current_language))
@@ -104,12 +113,25 @@ class SettingsDialog(QDialog):
         button_layout.addWidget(self.cancel_button)
         button_layout.addWidget(self.ok_button)
         main_layout.addLayout(button_layout)
-        
+
         self.setLayout(main_layout)
 
     def _setup_language_radio(self, radio_button, lang_code, base64_icon):
         radio_button.setProperty('language_code', lang_code)
-        radio_button.setText('')
+
+        # 设置语言文本
+        if lang_code == 'en':
+            radio_button.setText('English')
+        elif lang_code == 'ru':
+            radio_button.setText('Русский')
+        elif lang_code == 'zh':
+            radio_button.setText('中文')
+        elif lang_code == 'pt_BR':
+            radio_button.setText('Português')
+        else:
+            radio_button.setText(lang_code)
+
+        # 设置图标
         icon = QIcon()
         if base64_icon:
             try:
@@ -125,7 +147,8 @@ class SettingsDialog(QDialog):
             print(f"Warning: No base64 icon data provided for language '{lang_code}' in SettingsDialog.")
         radio_button.setIcon(icon)
         radio_button.setIconSize(QSize(24, 16))
-        lang_name = lang_code
+
+        # 设置提示文本
         tooltip_key = f'Switch language to {lang_code}'
         if lang_code == 'en':
             tooltip_key = 'Switch language to English'
@@ -136,7 +159,9 @@ class SettingsDialog(QDialog):
         elif lang_code == 'pt_BR':
             tooltip_key = 'Switch language to Brazilian Portuguese'
         radio_button.setToolTip(self.tr(tooltip_key, self.current_language))
-        radio_button.setMinimumSize(QSize(30, 22))
+
+        # 设置大小策略
+        radio_button.setMinimumSize(QSize(100, 22))
         radio_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
     def get_settings(self):
