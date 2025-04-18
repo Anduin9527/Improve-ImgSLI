@@ -399,31 +399,31 @@ class ImageComparisonApp(QWidget):
 
         # Add image buttons
         self.btn_image1 = PushButton()
+        self.btn_image1.setIcon(FluentIcon.PHOTO.icon())
         self.btn_image2 = PushButton()
+        self.btn_image2.setIcon(FluentIcon.PHOTO.icon())
 
         # Icon buttons
         self.btn_swap = TransparentPushButton()
         self.btn_clear_list1 = TransparentPushButton()
         self.btn_clear_list2 = TransparentPushButton()
 
-        # Set up swap icon with new SVG
-        swap_icon = self._get_icon('swap', fallback_text='⇄')
-        self.btn_swap.setIcon(swap_icon)
+        # 使用PyQtFluent自带的图标
+        self.btn_swap.setIcon(FluentIcon.SYNC.icon())
         self.btn_swap.setIconSize(QSize(24, 24))
         self.btn_swap.setFixedSize(36, 36)
         self.btn_swap.setStyleSheet("qproperty-iconSize: 24px; padding: 6px;")
 
-        # Set up clear icons with new SVG
-        clear_icon = self._get_icon('trash', use_standard_fallback=QStyle.StandardPixmap.SP_TrashIcon)
+        # 使用PyQtFluent自带的图标
         icon_size = QSize(22, 22)
         clear_button_size = QSize(36, 36)
 
-        self.btn_clear_list1.setIcon(clear_icon)
+        self.btn_clear_list1.setIcon(FluentIcon.DELETE.icon())
         self.btn_clear_list1.setIconSize(icon_size)
         self.btn_clear_list1.setFixedSize(clear_button_size)
         self.btn_clear_list1.setStyleSheet("qproperty-iconSize: 22px; padding: 7px;")
 
-        self.btn_clear_list2.setIcon(clear_icon)
+        self.btn_clear_list2.setIcon(FluentIcon.DELETE.icon())
         self.btn_clear_list2.setIconSize(icon_size)
         self.btn_clear_list2.setFixedSize(clear_button_size)
         self.btn_clear_list2.setStyleSheet("qproperty-iconSize: 22px; padding: 7px;")
@@ -489,18 +489,16 @@ class ImageComparisonApp(QWidget):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(8)  # Consistent spacing for buttons
 
-        # Setup help button with new SVG
+        # 使用PyQtFluent自带的图标
         self.help_button = TransparentPushButton()
-        help_icon = self._get_icon('help', fallback_text='?')
-        self.help_button.setIcon(help_icon)
+        self.help_button.setIcon(FluentIcon.HELP.icon())
         self.help_button.setIconSize(QSize(24, 24))
         self.help_button.setFixedSize(36, 36)
         self.help_button.setStyleSheet("qproperty-iconSize: 24px; padding: 6px;")
 
-        # Setup settings button with new SVG
+        # 使用PyQtFluent自带的图标
         self.btn_settings = TransparentPushButton()
-        settings_icon = self._get_icon('settings', fallback_text='...')
-        self.btn_settings.setIcon(settings_icon)
+        self.btn_settings.setIcon(FluentIcon.SETTING.icon())
         self.btn_settings.setIconSize(QSize(24, 24))
         self.btn_settings.setFixedSize(36, 36)
         self.btn_settings.setStyleSheet("qproperty-iconSize: 24px; padding: 6px;")
@@ -630,10 +628,10 @@ class ImageComparisonApp(QWidget):
         self.font_size_slider.setValue(200)
         self.font_size_slider.setMinimumWidth(100)
 
-        # Color picker button
+        # 使用PyQtFluent自带的图标
         self.btn_color_picker = PushButton()
         icon_size = QSize(24, 24)
-        self.btn_color_picker.setIcon(self._create_color_wheel_icon(icon_size))
+        self.btn_color_picker.setIcon(FluentIcon.PALETTE.icon())
         self.btn_color_picker.setIconSize(icon_size)
         self.btn_color_picker.setFixedSize(36, 36)
         self.btn_color_picker.setStyleSheet("qproperty-iconSize: 24px; padding: 6px;")
@@ -677,14 +675,17 @@ class ImageComparisonApp(QWidget):
 
         # Create buttons with consistent sizes
         self.btn_save = PushButton()
+        self.btn_save.setIcon(FluentIcon.SAVE.icon())
         self.btn_save.setMinimumHeight(32)
         self.btn_save.setMinimumWidth(120)
 
         self.btn_save_animation = PushButton()
+        self.btn_save_animation.setIcon(FluentIcon.MOVIE.icon())
         self.btn_save_animation.setMinimumHeight(32)
         self.btn_save_animation.setMinimumWidth(120)
 
         self.btn_save_sequential = PushButton()
+        self.btn_save_sequential.setIcon(FluentIcon.ALBUM.icon())
         self.btn_save_sequential.setMinimumHeight(32)
         self.btn_save_sequential.setMinimumWidth(120)
 

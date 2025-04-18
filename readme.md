@@ -45,6 +45,7 @@ Improved ImgSLI is an open-source, non-proprietary software designed for intuiti
 *   Save the current comparison view (including split line, magnifier, capture marker, and optional file names) as a full-resolution image.
 *   Export animated GIF or MP4 videos showing a scanning line transition from left image to right image.
 *   Create sequential animations with multiple images, showing smooth scanning line transitions between consecutive images in the sequence.
+*   Multi-image comparison mode for comparing multiple images of the same resolution in a grid layout.
 
 **Magnifier Tool:**
 *   Powerful Magnifier for close inspection.
@@ -107,6 +108,8 @@ flatpak run io.github.Loganavter.Improve-ImgSLI
 
 ## Basic Usage <a name="basic-usage"></a>
 
+### Image Comparison Mode
+
 1.  **Launch:** Start Improved ImgSLI using the method corresponding to your installation.
 2.  **Load Images:** Use the "Add Img(s)" buttons or drag and drop image files onto the left or right half of the main image display area. If you load multiple files onto one side, use the dropdown menu above it to select the active image.
 3.  **Compare:** In the standard comparison mode, click and drag the mouse on the image to move the separator line. Use the "Horizontal Split" checkbox to change the split orientation.
@@ -114,6 +117,16 @@ flatpak run io.github.Loganavter.Improve-ImgSLI
 5.  **Save:** Click the "Save Result" button in the UI to export the current comparison view as a single image file.
 6.  **Create Animation:** Click the "Save Animation" button to export a GIF or MP4 animation that shows a scanning line moving from left to right, visually transitioning between the two images.
 7.  **Create Sequential Animation:** Click the "Save Sequential" button to select multiple images and create a continuous animation that transitions through all selected images in sequence with smooth scanning lines.
+
+### Multi-Image Comparison Mode
+
+1.  **Switch to Multi-Image Mode:** Click on the "Multi-Image Comparison" tab in the main interface.
+2.  **Import Images:** Click the "Import Images" button to select multiple images of the same resolution.
+3.  **Adjust Layout:** Use the "Rows" and "Columns" spinboxes to set the grid layout for displaying images.
+4.  **Use Magnifier:** Enable the magnifier checkbox to inspect details. Click on any image to position the capture area.
+5.  **Customize Magnifier:** Adjust the magnifier size, capture area size, and position using the provided controls.
+6.  **Add Text Annotations:** Enable "Show Text Information" to add custom text to each image. Adjust text color and size as needed.
+7.  **Export Images:** Use "Export with Magnifier" to save images with the magnifier effect, or "Export Original" to save the original images without effects.
 
 https://github.com/user-attachments/assets/f2c843c2-31eb-4fb9-8eef-2d28630f2baf
 
