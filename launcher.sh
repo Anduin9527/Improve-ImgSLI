@@ -2,7 +2,7 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 VENV_DIR="$SCRIPT_DIR/venv"
-APP_MAIN="$SCRIPT_DIR/src/Improve_ImgSLI.py"
+APP_MAIN="$SCRIPT_DIR/src/run.py"
 REQUIREMENTS="$SCRIPT_DIR/requirements.txt"
 
 show_spinner() {
@@ -131,68 +131,84 @@ setup_new_venv() {
 }
 
 
-venv_ready=false
-retry_done=false
-
-while ! $venv_ready; do
-
-    if [ ! -d "$VENV_DIR" ]; then
-        if ! setup_new_venv; then
-            echo "Critical error: Failed to create and set up venv."
-            exit 1
-        fi
-        venv_ready=true
+# 检查是否已经在虚拟环境中
+if [ -n "$VIRTUAL_ENV" ]; then
+    echo "Already in a virtual environment: $VIRTUAL_ENV"
+    # 如果已经在虚拟环境中，但不是我们的目标环境，则退出当前环境
+    if [ "$VIRTUAL_ENV" != "$VENV_DIR" ]; then
+        echo "Deactivating current environment to use our own..."
+        deactivate_venv
     else
-        echo "Existing virtual environment found."
-        if ! activate_venv; then
-             echo "Failed to activate existing venv. Considering it corrupted."
-             if $retry_done; then
-                 echo "Error: Retry activation attempt also failed after recreation."
-                 exit 1
-             fi
-             echo "Removing potentially corrupted venv..."
-             rm -rf "$VENV_DIR"
-             retry_done=true
-             continue
-        fi
+        echo "Using current active virtual environment."
+        venv_ready=true
+    fi
+fi
 
-        update_needed=false
-        if [ ! -f "$VENV_DIR/.installed" ]; then
-            echo "Installation marker .installed is missing."
-            update_needed=true
-        elif [ "$REQUIREMENTS" -nt "$VENV_DIR/.installed" ]; then
-            echo "requirements.txt is newer than the installation marker."
-            update_needed=true
-        fi
+# 如果没有设置venv_ready，则进行常规检查
+if [ -z "$venv_ready" ] || [ "$venv_ready" != "true" ]; then
+    venv_ready=false
+    retry_done=false
 
-        install_ok=true
-        if $update_needed; then
-            run_with_spinner "Checking/Updating dependencies..." pip install -r "$REQUIREMENTS" --disable-pip-version-check --quiet
-            if [ $? -ne 0 ]; then
-                install_ok=false
-                echo "Error updating dependencies in existing venv."
-            else
-                touch "$VENV_DIR/.installed"
-                echo "Dependencies updated successfully."
-            fi
-        fi
-
-        if $install_ok; then
-            venv_ready=true
-        else
-            if $retry_done; then
-                echo "Critical error: Failed to install dependencies even after recreating venv."
-                deactivate_venv
+    while ! $venv_ready; do
+        if [ ! -d "$VENV_DIR" ]; then
+            echo "No virtual environment found. Creating new one..."
+            if ! setup_new_venv; then
+                echo "Critical error: Failed to create and set up venv."
                 exit 1
             fi
+            venv_ready=true
+        else
+            echo "Existing virtual environment found."
+            if ! activate_venv; then
+                echo "Failed to activate existing venv. Considering it corrupted."
+                if $retry_done; then
+                    echo "Error: Retry activation attempt also failed after recreation."
+                    exit 1
+                fi
+                echo "Removing potentially corrupted venv..."
+                rm -rf "$VENV_DIR"
+                retry_done=true
+                continue
+            fi
 
-            echo "Venv seems corrupted. Removing for recreation..."
-            deactivate_venv
-            rm -rf "$VENV_DIR"
-            retry_done=true
+            update_needed=false
+            if [ ! -f "$VENV_DIR/.installed" ]; then
+                echo "Installation marker .installed is missing."
+                update_needed=true
+            elif [ "$REQUIREMENTS" -nt "$VENV_DIR/.installed" ]; then
+                echo "requirements.txt is newer than the installation marker."
+                update_needed=true
+            fi
+
+            install_ok=true
+            if $update_needed; then
+                run_with_spinner "Checking/Updating dependencies..." pip install -r "$REQUIREMENTS" --disable-pip-version-check --quiet
+                if [ $? -ne 0 ]; then
+                    install_ok=false
+                    echo "Error updating dependencies in existing venv."
+                else
+                    touch "$VENV_DIR/.installed"
+                    echo "Dependencies updated successfully."
+                fi
+            fi
+
+            if $install_ok; then
+                venv_ready=true
+            else
+                if $retry_done; then
+                    echo "Critical error: Failed to install dependencies even after recreating venv."
+                    deactivate_venv
+                    exit 1
+                fi
+
+                echo "Venv seems corrupted. Removing for recreation..."
+                deactivate_venv
+                rm -rf "$VENV_DIR"
+                retry_done=true
+            fi
         fi
-    fi
-done
+    done
+fi
 
 if [ -z "$VIRTUAL_ENV" ] || [ "$VIRTUAL_ENV" != "$VENV_DIR" ]; then
      echo "WARNING: Venv not active before running the application. Attempting to activate again..."
@@ -202,11 +218,31 @@ if [ -z "$VIRTUAL_ENV" ] || [ "$VIRTUAL_ENV" != "$VENV_DIR" ]; then
      fi
 fi
 
-echo "Running application"
+# 检查应用程序主文件是否存在
+if [ ! -f "$APP_MAIN" ]; then
+    echo "Error: Application main file not found: $APP_MAIN"
+    deactivate_venv
+    exit 1
+fi
+
+# 运行应用程序
+echo "Running application: $APP_MAIN"
+echo "Using Python: $(which python)"
+echo "Python version: $(python --version)"
+echo "Virtual environment: $VIRTUAL_ENV"
+echo ""
+
 python "$APP_MAIN"
 app_exit_code=$?
 
+# 退出虚拟环境
 deactivate_venv
 
-echo "Application finished with exit code: $app_exit_code"
+# 显示结果
+if [ $app_exit_code -eq 0 ]; then
+    echo "Application finished successfully."
+else
+    echo "Application finished with exit code: $app_exit_code"
+fi
+
 exit $app_exit_code
